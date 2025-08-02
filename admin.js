@@ -1,70 +1,96 @@
-// Global assignments
-window.saveGitHubToken = function(token) {
-    // Functionality to save GitHub token
+// admin.js
+
+// Global window assignments for admin functionality
+window.admin = {
+    token: null,
+    statusElement: document.getElementById('status'),
+    tokenInput: document.getElementById('tokenInput'),
+    syncButton: document.getElementById('syncButton'),
+    clearButton: document.getElementById('clearButton'),
+    testButton: document.getElementById('testButton'),
 };
 
-window.testGitHubConnection = function() {
-    // Functionality to test GitHub connection
+// Save GitHub Token
+admin.saveGitHubToken = function() {
+    this.token = this.tokenInput.value;
+    localStorage.setItem('githubToken', this.token);
+    this.showSuccessMessage('Token saved successfully!');
 };
 
-window.toggleTokenVisibility = function() {
-    // Functionality to toggle the visibility of the token
+// Test GitHub Connection
+admin.testGitHubConnection = async function() {
+    try {
+        const response = await fetch('https://api.github.com/user', {
+            headers: {
+                Authorization: `token ${this.token}`
+            }
+        });
+        if (response.ok) {
+            this.showSuccessMessage('Connection successful!');
+        } else {
+            this.showErrorMessage('Connection failed!');
+        }
+    } catch (error) {
+        this.showErrorMessage('Error testing connection: ' + error.message);
+    }
 };
 
-window.syncToGitHub = function() {
-    // Functionality to sync data to GitHub
+// Toggle Token Visibility
+admin.toggleTokenVisibility = function() {
+    const type = this.tokenInput.type === 'password' ? 'text' : 'password';
+    this.tokenInput.type = type;
 };
 
-window.clearGitHubToken = function() {
-    // Functionality to clear the GitHub token
+// Sync to GitHub
+admin.syncToGitHub = async function() {
+    // Implement the sync logic here
+    this.showSuccessMessage('Syncing to GitHub...');
 };
 
-window.showSuccessMessage = function(message) {
-    // Functionality to show a success message
+// Clear GitHub Token
+admin.clearGitHubToken = function() {
+    this.token = null;
+    localStorage.removeItem('githubToken');
+    this.tokenInput.value = '';
+    this.showSuccessMessage('Token cleared successfully!');
 };
 
-window.showErrorMessage = function(message) {
-    // Functionality to show an error message
+// Show Success Message
+admin.showSuccessMessage = function(message) {
+    this.statusElement.textContent = message;
+    this.statusElement.style.color = 'green';
 };
 
-window.showLoadingMessage = function() {
-    // Functionality to show a loading message
+// Show Error Message
+admin.showErrorMessage = function(message) {
+    this.statusElement.textContent = message;
+    this.statusElement.style.color = 'red';
 };
 
-window.showModal = function(modalId) {
-    // Functionality to show a modal
+// Update GitHub Status
+admin.updateGitHubStatus = function(status) {
+    // Update status logic
+    this.statusElement.textContent = status;
 };
 
-window.closeModal = function(modalId) {
-    // Functionality to close a modal
+// Initialize Navigation
+admin.initializeNavigation = function() {
+    // Navigation initialization logic
 };
 
-window.updateGitHubStatus = function(status) {
-    // Functionality to update GitHub status
+// Show Section
+admin.showSection = function(sectionId) {
+    // Logic to display specific section
+    document.querySelectorAll('.admin-section').forEach(section => {
+        section.style.display = 'none';
+    });
+    document.getElementById(sectionId).style.display = 'block';
 };
 
-window.updateLastSyncTime = function() {
-    // Functionality to update the last sync time
+// Event listeners for buttons
+window.onload = function() {
+    admin.tokenInput.value = localStorage.getItem('githubToken') || '';
+    admin.syncButton.addEventListener('click', () => admin.syncToGitHub());
+    admin.clearButton.addEventListener('click', () => admin.clearGitHubToken());
+    admin.testButton.addEventListener('click', () => admin.testGitHubConnection());
 };
-
-window.initializeGitHubSettings = function() {
-    // Functionality to initialize GitHub settings
-};
-
-window.startAutoSync = function() {
-    // Functionality to start auto sync
-};
-
-window.stopAutoSync = function() {
-    // Functionality to stop auto sync
-};
-
-window.initializeNavigation = function() {
-    // Functionality to initialize navigation
-};
-
-window.showSection = function(sectionId) {
-    // Functionality to show a specific section
-};
-
-// Add any additional functionality needed for the admin panel here
