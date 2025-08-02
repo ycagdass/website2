@@ -104,8 +104,9 @@ async function loadFromGitHub() {
         const cachedData = getCachedGitHubData();
         const cacheAge = Date.now() - parseInt(localStorage.getItem('github_cache_timestamp') || '0');
         
-        // Use cache if it's less than 30 seconds old (to reduce API calls)
-        if (cachedData && cacheAge < 30000) {
+        // Use cache if it's less than 10 seconds old (to reduce API calls)
+        if (cachedData && cacheAge < 10000) {
+            console.log('Using recent GitHub cache');
             return cachedData;
         }
         
@@ -123,6 +124,22 @@ async function loadFromGitHub() {
         if (response.ok) {
             const data = await response.json();
             console.log('Content loaded from GitHub');
+            
+            // Check if data has metadata and is newer than cached data
+            if (data._metadata) {
+                const newTimestamp = new Date(data._metadata.lastUpdated);
+                const cachedTimestamp = cachedData && cachedData._metadata ? 
+                    new Date(cachedData._metadata.lastUpdated) : 
+                    new Date(0);
+                
+                if (newTimestamp <= cachedTimestamp) {
+                    console.log('Cached data is newer, using cache');
+                    return cachedData;
+                }
+                
+                console.log(`Loading updated content from GitHub (version: ${data._metadata.version})`);
+            }
+            
             return data;
         } else {
             console.log('GitHub response not OK:', response.status);
@@ -604,6 +621,8 @@ window.addEventListener('storage', function(e) {
 if (typeof BroadcastChannel !== 'undefined') {
     const channel = new BroadcastChannel('admin-updates');
     channel.addEventListener('message', function(e) {
+        console.log('Received broadcast message:', e.data);
+        
         if (e.data.type === 'content-update') {
             // Update specific section
             setTimeout(() => {
@@ -619,6 +638,24 @@ if (typeof BroadcastChannel !== 'undefined') {
             setTimeout(() => {
                 loadContent();
             }, 100);
+        } else if (e.data.type === 'github-sync') {
+            // GitHub sync completed, reload from GitHub immediately
+            setTimeout(async () => {
+                console.log('GitHub sync detected, reloading content...');
+                try {
+                    const githubData = await loadFromGitHub();
+                    if (githubData) {
+                        updateContent(githubData);
+                        cacheDataLocally(githubData);
+                        showNetworkStatus('github');
+                        console.log('Content updated from GitHub sync');
+                    }
+                } catch (error) {
+                    console.log('Failed to load updated content from GitHub:', error);
+                    loadContent();
+                    loadContactInfo();
+                }
+            }, 500); // Small delay to ensure GitHub has processed the update
         }
     });
 }

@@ -12,5 +12,11 @@
     "https://via.placeholder.com/400x300/8B2635/ffffff?text=Halı+Yıkama+2",
     "https://via.placeholder.com/400x300/FF6F3C/ffffff?text=Koltuk+Yıkama+2",
     "https://via.placeholder.com/400x300/FF8C42/ffffff?text=Araç+İçi+2"
-  ]
+  ],
+  "_metadata": {
+    "version": "1.0.0",
+    "lastUpdated": "2024-12-19T00:00:00.000Z",
+    "source": "initial-setup",
+    "description": "Canpolat Halı ve Koltuk Yıkama website content data"
+  }
 }
