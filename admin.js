@@ -75,13 +75,29 @@ const GitHubAPI = {
             });
 
             if (!response.ok) {
-                throw new Error(`GitHub API error: ${response.status}`);
+                const errorData = await response.json();
+                throw new Error(`GitHub API error: ${response.status} - ${errorData.message || 'Unknown error'}`);
             }
 
             return await response.json();
         } catch (error) {
             console.error('Error updating data on GitHub:', error);
             throw error;
+        }
+    },
+
+    // Retry mechanism for GitHub operations
+    async retryOperation(operation, maxRetries = 3, delay = 1000) {
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                return await operation();
+            } catch (error) {
+                if (i === maxRetries - 1) {
+                    throw error;
+                }
+                console.log(`Retry ${i + 1}/${maxRetries} after error:`, error.message);
+                await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+            }
         }
     },
 
@@ -350,10 +366,12 @@ async function saveContent(sectionId) {
         // Try to save to GitHub
         if (localStorage.getItem('github_token')) {
             try {
-                await GitHubAPI.updateDataFile(
-                    { [sectionId]: content },
-                    `Update ${getSectionDisplayName(sectionId)} content`
-                );
+                await GitHubAPI.retryOperation(async () => {
+                    return await GitHubAPI.updateDataFile(
+                        { [sectionId]: content },
+                        `Update ${getSectionDisplayName(sectionId)} content`
+                    );
+                });
                 
                 showSuccessMessage(`${getSectionDisplayName(sectionId)} içeriği GitHub'a başarıyla kaydedildi!`);
             } catch (error) {
@@ -1104,6 +1122,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize GitHub settings
     initGitHubSettings();
     
+    // Load existing GitHub token if present
+    loadGitHubToken();
+    
     // Add keyboard shortcuts
     document.addEventListener('keydown', function(e) {
         // Ctrl+S to save current section
@@ -1130,7 +1151,21 @@ function initGitHubSettings() {
     const token = localStorage.getItem('github_token');
     if (token) {
         testGitHubConnection();
+        
+        // Start heartbeat monitoring
+        startGitHubHeartbeat();
     }
+}
+
+// Start monitoring GitHub connectivity
+function startGitHubHeartbeat() {
+    // Check every 60 seconds
+    setInterval(async () => {
+        if (localStorage.getItem('github_token')) {
+            const isConnected = await testGitHubConnection();
+            updateGitHubStatus(isConnected);
+        }
+    }, 60000);
 }
 
 function toggleGitHubSettings() {
@@ -1262,4 +1297,14 @@ function clearGitHubToken() {
     }
     updateGitHubStatus(false);
     showSuccessMessage('GitHub token temizlendi!');
+}
+
+function loadGitHubToken() {
+    const token = localStorage.getItem('github_token');
+    const tokenInput = document.getElementById('github-token');
+    if (token && tokenInput) {
+        // Show masked token for security
+        tokenInput.value = token.substring(0, 8) + '...' + token.substring(token.length - 4);
+        tokenInput.setAttribute('data-original', token);
+    }
 }

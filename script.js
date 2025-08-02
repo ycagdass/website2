@@ -13,6 +13,7 @@ async function loadContent() {
             updateContent(githubData);
             // Cache to localStorage for offline access
             cacheDataLocally(githubData);
+            showNetworkStatus('github');
             return;
         }
         
@@ -29,33 +30,118 @@ async function loadContent() {
                 if (response.ok) {
                     const data = await response.json();
                     updateContent(data);
+                    showNetworkStatus('local');
                 }
             } catch (error) {
                 console.log('JSON file not found, using defaults');
+                showNetworkStatus('offline');
             }
+        } else {
+            showNetworkStatus('local');
         }
     } catch (error) {
         console.log('Loading from localStorage due to:', error);
         loadFromLocalStorage();
+        showNetworkStatus('offline');
+    }
+}
+
+// Show network status indicator
+function showNetworkStatus(mode) {
+    let indicator = document.getElementById('networkStatusIndicator');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'networkStatusIndicator';
+        indicator.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 1000;
+            opacity: 0.8;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        `;
+        document.body.appendChild(indicator);
+        
+        // Auto-hide after 3 seconds
+        setTimeout(() => {
+            if (indicator) {
+                indicator.style.opacity = '0.3';
+            }
+        }, 3000);
+    }
+    
+    switch (mode) {
+        case 'github':
+            indicator.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+            indicator.style.color = 'white';
+            indicator.textContent = '🌐 GitHub Sync';
+            indicator.title = 'İçerik GitHub\'dan yüklendi';
+            break;
+        case 'local':
+            indicator.style.background = 'linear-gradient(135deg, #ffc107, #fd7e14)';
+            indicator.style.color = 'white';
+            indicator.textContent = '💾 Yerel Cache';
+            indicator.title = 'İçerik yerel cache\'den yüklendi';
+            break;
+        case 'offline':
+            indicator.style.background = 'linear-gradient(135deg, #6c757d, #495057)';
+            indicator.style.color = 'white';
+            indicator.textContent = '📱 Çevrimdışı';
+            indicator.title = 'Çevrimdışı mod - yerel veriler kullanılıyor';
+            break;
     }
 }
 
 // Load content from GitHub
 async function loadFromGitHub() {
     try {
+        // Check cache first to avoid unnecessary requests
+        const cachedData = getCachedGitHubData();
+        const cacheAge = Date.now() - parseInt(localStorage.getItem('github_cache_timestamp') || '0');
+        
+        // Use cache if it's less than 30 seconds old (to reduce API calls)
+        if (cachedData && cacheAge < 30000) {
+            return cachedData;
+        }
+        
         // Use cache-busting timestamp
         const timestamp = Date.now();
-        const response = await fetch(`https://raw.githubusercontent.com/ycagdass/website2/main/data.json?t=${timestamp}`);
+        const response = await fetch(`https://raw.githubusercontent.com/ycagdass/website2/main/data.json?t=${timestamp}`, {
+            method: 'GET',
+            headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+            }
+        });
         
         if (response.ok) {
             const data = await response.json();
             console.log('Content loaded from GitHub');
             return data;
+        } else {
+            console.log('GitHub response not OK:', response.status);
         }
     } catch (error) {
         console.log('GitHub fetch failed:', error);
     }
     return null;
+}
+
+// Get cached GitHub data
+function getCachedGitHubData() {
+    try {
+        const cached = localStorage.getItem('github_cache');
+        return cached ? JSON.parse(cached) : null;
+    } catch (error) {
+        console.error('Error reading GitHub cache:', error);
+        return null;
+    }
 }
 
 // Cache data locally for offline access
@@ -458,39 +544,50 @@ function loadContactInfo() {
 }
 
 // Auto-refresh content every 5 seconds for real-time updates
-setInterval(async () => {
-    // Try to load from GitHub first
-    try {
-        const githubData = await loadFromGitHub();
-        if (githubData) {
-            updateContent(githubData);
-            cacheDataLocally(githubData);
-            return;
-        }
-    } catch (error) {
-        console.log('GitHub auto-refresh failed, using localStorage');
+let refreshInterval;
+
+function startAutoRefresh() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
     }
     
-    // Fallback to localStorage
-    loadContent();
-    loadContactInfo();
-    
-    // Check for gallery updates
-    const galleryData = localStorage.getItem('gallery_images');
-    if (galleryData) {
+    refreshInterval = setInterval(async () => {
+        // Try to load from GitHub first
         try {
-            const images = JSON.parse(galleryData);
-            const gallery = document.getElementById('gallery-images');
-            if (gallery && images.length > 0) {
-                gallery.innerHTML = images.map(img => 
-                    `<img src="${img}" alt="Canpolat Halı Yıkama Galeri" loading="lazy" onclick="openLightbox('${img}')">`
-                ).join('');
+            const githubData = await loadFromGitHub();
+            if (githubData) {
+                updateContent(githubData);
+                cacheDataLocally(githubData);
+                return;
             }
-        } catch (e) {
-            console.error('Error loading gallery:', e);
+        } catch (error) {
+            console.log('GitHub auto-refresh failed, using localStorage');
         }
-    }
-}, 5000);
+        
+        // Fallback to localStorage
+        loadContent();
+        loadContactInfo();
+        
+        // Check for gallery updates
+        const galleryData = localStorage.getItem('gallery_images');
+        if (galleryData) {
+            try {
+                const images = JSON.parse(galleryData);
+                const gallery = document.getElementById('gallery-images');
+                if (gallery && images.length > 0) {
+                    gallery.innerHTML = images.map(img => 
+                        `<img src="${img}" alt="Canpolat Halı Yıkama Galeri" loading="lazy" onclick="openLightbox('${img}')">`
+                    ).join('');
+                }
+            } catch (e) {
+                console.error('Error loading gallery:', e);
+            }
+        }
+    }, 5000);
+}
+
+// Start auto-refresh on page load
+startAutoRefresh();
 
 // Listen for localStorage changes (for real-time updates)
 window.addEventListener('storage', function(e) {
@@ -530,6 +627,15 @@ if (typeof BroadcastChannel !== 'undefined') {
 window.addEventListener('focus', function() {
     loadContent();
     loadContactInfo();
+});
+
+// Handle visibility change for better mobile support
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+        // Page became visible, refresh content
+        loadContent();
+        loadContactInfo();
+    }
 });
 
 // WhatsApp button click tracking
