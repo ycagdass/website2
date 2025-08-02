@@ -1177,7 +1177,10 @@ function toggleGitHubSettings() {
 
 async function saveGitHubToken() {
     const tokenInput = document.getElementById('githubToken');
-    const token = tokenInput ? tokenInput.value.trim() : '';
+    // Use original token from data attribute if available (for masked tokens),
+    // otherwise use the input value (for new tokens)
+    const originalToken = tokenInput ? tokenInput.getAttribute('data-original') : null;
+    const token = originalToken || (tokenInput ? tokenInput.value.trim() : '');
     
     if (!token) {
         showErrorMessage('Lütfen geçerli bir GitHub token girin!');
@@ -1302,9 +1305,11 @@ function clearGitHubToken() {
 function loadGitHubToken() {
     const token = localStorage.getItem('githubToken');
     const tokenInput = document.getElementById('githubToken');
-    if (token && tokenInput) {
-        // Show masked token for security
-        tokenInput.value = token.substring(0, 8) + '...' + token.substring(token.length - 4);
+    if (token && tokenInput && token.startsWith('ghp_')) {
+        // Store the original token in data attribute before masking
         tokenInput.setAttribute('data-original', token);
+        // Show masked token for security - mask middle part while keeping structure
+        const maskedToken = token.substring(0, 8) + '...' + token.substring(token.length - 4);
+        tokenInput.value = maskedToken;
     }
 }
