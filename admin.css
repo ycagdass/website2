@@ -725,3 +725,191 @@ body {
         font-size: 16px; /* iOS zoom prevention */
     }
 }
+
+/* GitHub Settings Styles */
+.settings-info {
+    margin-bottom: 30px;
+}
+
+.info-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 25px;
+    border-radius: 12px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.info-card h4 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.info-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 15px 0 0 0;
+}
+
+.info-card ul li {
+    padding: 5px 0;
+    color: var(--text-dark);
+}
+
+.github-status-section {
+    margin-bottom: 30px;
+}
+
+.github-status-section h4 {
+    margin-bottom: 15px;
+    color: var(--text-dark);
+}
+
+.github-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.github-status.connected {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    color: #155724;
+    border: 2px solid #b8dacc;
+}
+
+.github-status.disconnected {
+    background: linear-gradient(135deg, #f8d7da 0%, #f1b2b8 100%);
+    color: #721c24;
+    border: 2px solid #f1b2b8;
+}
+
+.github-token-section {
+    margin-bottom: 30px;
+}
+
+.github-token-section h4 {
+    margin-bottom: 15px;
+    color: var(--text-dark);
+}
+
+.form-help {
+    color: #6c757d;
+    font-size: 12px;
+    line-height: 1.4;
+    margin-top: 5px;
+}
+
+.github-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 30px;
+}
+
+.github-actions .btn {
+    flex: 1;
+    min-width: 150px;
+}
+
+.github-instructions {
+    background: #f8f9fa;
+    padding: 25px;
+    border-radius: 12px;
+    border: 1px solid #dee2e6;
+}
+
+.github-instructions h4 {
+    margin-bottom: 20px;
+    color: var(--primary-color);
+}
+
+.github-instructions ol {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.github-instructions ol li {
+    padding: 8px 0;
+    line-height: 1.5;
+}
+
+.github-instructions strong {
+    background: #fff3cd;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #856404;
+}
+
+/* Message Modal Styles */
+.message-modal {
+    z-index: 10000;
+}
+
+.message-modal.success .modal-content {
+    border-left: 4px solid #28a745;
+}
+
+.message-modal.error .modal-content {
+    border-left: 4px solid #dc3545;
+}
+
+.message-modal.warning .modal-content {
+    border-left: 4px solid #ffc107;
+}
+
+.message-modal.loading .modal-content {
+    border-left: 4px solid #007bff;
+}
+
+.message-icon {
+    font-size: 24px;
+    margin-right: 10px;
+}
+
+.message-modal.success .message-icon {
+    color: #28a745;
+}
+
+.message-modal.error .message-icon {
+    color: #dc3545;
+}
+
+.message-modal.warning .message-icon {
+    color: #ffc107;
+}
+
+.message-modal.loading .message-icon {
+    color: #007bff;
+}
+
+.message-title {
+    margin: 0;
+    font-size: 18px;
+}
+
+.message-text {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+    .github-actions {
+        flex-direction: column;
+    }
+    
+    .github-actions .btn {
+        width: 100%;
+        min-width: auto;
+    }
+    
+    .info-card,
+    .github-instructions {
+        padding: 20px;
+    }
+}

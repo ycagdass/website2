@@ -5,6 +5,124 @@ let currentSection = 'dashboard';
 let isLoggedIn = false;
 let uploadedImages = [];
 
+// GitHub API Configuration
+const GITHUB_CONFIG = {
+    owner: 'ycagdass',
+    repo: 'website2',
+    branch: 'main',
+    dataFile: 'data.json'
+};
+
+// GitHub API helper functions
+const GitHubAPI = {
+    // Get the current data.json file from GitHub
+    async getDataFile() {
+        try {
+            const token = localStorage.getItem('github_token');
+            if (!token) {
+                throw new Error('GitHub token not found');
+            }
+
+            const response = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.dataFile}`, {
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`GitHub API error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return {
+                content: JSON.parse(atob(data.content)),
+                sha: data.sha
+            };
+        } catch (error) {
+            console.error('Error fetching data from GitHub:', error);
+            throw error;
+        }
+    },
+
+    // Update data.json file on GitHub
+    async updateDataFile(newData, commitMessage = 'Update content from admin panel') {
+        try {
+            const token = localStorage.getItem('github_token');
+            if (!token) {
+                throw new Error('GitHub token not found');
+            }
+
+            // Get current file SHA
+            const currentFile = await this.getDataFile();
+            
+            // Merge with existing data
+            const updatedData = { ...currentFile.content, ...newData };
+
+            const response = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.dataFile}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: commitMessage,
+                    content: btoa(JSON.stringify(updatedData, null, 2)),
+                    sha: currentFile.sha,
+                    branch: GITHUB_CONFIG.branch
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`GitHub API error: ${response.status} - ${errorData.message || 'Unknown error'}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error updating data on GitHub:', error);
+            throw error;
+        }
+    },
+
+    // Retry mechanism for GitHub operations
+    async retryOperation(operation, maxRetries = 3, delay = 1000) {
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                return await operation();
+            } catch (error) {
+                if (i === maxRetries - 1) {
+                    throw error;
+                }
+                console.log(`Retry ${i + 1}/${maxRetries} after error:`, error.message);
+                await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+            }
+        }
+    },
+
+    // Test GitHub connection
+    async testConnection() {
+        try {
+            const token = localStorage.getItem('github_token');
+            if (!token) {
+                return false;
+            }
+
+            const response = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}`, {
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+
+            return response.ok;
+        } catch (error) {
+            return false;
+        }
+    }
+};
+
 // Login functionality
 document.addEventListener('DOMContentLoaded', function() {
     const loginForm = document.getElementById('loginForm');
@@ -199,7 +317,8 @@ function updateSectionHeader(sectionName) {
         'galeri': 'Galeri',
         'yorumlar': 'Müşteri Yorumları',
         'iletisim': 'İletişim',
-        'fiyatlistesi': 'Fiyat Listesi'
+        'fiyatlistesi': 'Fiyat Listesi',
+        'settings': 'GitHub Ayarları'
     };
     
     const subtitles = {
@@ -210,7 +329,8 @@ function updateSectionHeader(sectionName) {
         'galeri': 'Fotoğraf yönetimi',
         'yorumlar': 'Müşteri yorumları düzenleme',
         'iletisim': 'İletişim bilgileri düzenleme',
-        'fiyatlistesi': 'Fiyat bilgileri düzenleme'
+        'fiyatlistesi': 'Fiyat bilgileri düzenleme',
+        'settings': 'GitHub tabanlı senkronizasyon ayarları'
     };
     
     document.getElementById('sectionTitle').textContent = titles[sectionName] || sectionName;
@@ -218,42 +338,69 @@ function updateSectionHeader(sectionName) {
 }
 
 // Save content function
-function saveContent(sectionId) {
+async function saveContent(sectionId) {
     if (!validateSession()) return;
     
     const contentElement = document.getElementById(sectionId + '-content');
     if (!contentElement) {
-        alert('İçerik alanı bulunamadı!');
+        showErrorMessage('İçerik alanı bulunamadı!');
         return;
     }
     
     const content = contentElement.value;
     
-    // Save to localStorage with timestamp
-    const data = {
-        section: sectionId,
-        content: content,
-        timestamp: new Date().toISOString(),
-        updated: Date.now()
-    };
+    // Show loading state
+    showLoadingMessage('İçerik kaydediliyor...');
     
-    localStorage.setItem(`content_${sectionId}`, JSON.stringify(data));
-    
-    // Update data.json in memory (for demo)
-    updateDataFile(sectionId, content);
-    
-    // Trigger storage event for real-time updates
-    window.dispatchEvent(new StorageEvent('storage', {
-        key: `content_${sectionId}`,
-        newValue: JSON.stringify(data),
-        storageArea: localStorage
-    }));
-    
-    // Show success message
-    showSuccessMessage(`${getSectionDisplayName(sectionId)} içeriği başarıyla kaydedildi!`);
-    
-    // Force update on main site if it's open
-    updateLiveSite(sectionId, content);
+    try {
+        // Save to localStorage first (for immediate local update)
+        const data = {
+            section: sectionId,
+            content: content,
+            timestamp: new Date().toISOString(),
+            updated: Date.now()
+        };
+        
+        localStorage.setItem(`content_${sectionId}`, JSON.stringify(data));
+        
+        // Try to save to GitHub
+        if (localStorage.getItem('github_token')) {
+            try {
+                await GitHubAPI.retryOperation(async () => {
+                    return await GitHubAPI.updateDataFile(
+                        { [sectionId]: content },
+                        `Update ${getSectionDisplayName(sectionId)} content`
+                    );
+                });
+                
+                showSuccessMessage(`${getSectionDisplayName(sectionId)} içeriği GitHub'a başarıyla kaydedildi!`);
+            } catch (error) {
+                console.error('GitHub save error:', error);
+                showWarningMessage(`${getSectionDisplayName(sectionId)} içeriği yerel olarak kaydedildi. GitHub bağlantısı kontrol ediliyor...`);
+                
+                // Fall back to local storage
+                updateLocalDataFile(sectionId, content);
+            }
+        } else {
+            // No GitHub token, save locally only
+            updateLocalDataFile(sectionId, content);
+            showSuccessMessage(`${getSectionDisplayName(sectionId)} içeriği yerel olarak kaydedildi!`);
+        }
+        
+        // Trigger storage event for real-time updates
+        window.dispatchEvent(new StorageEvent('storage', {
+            key: `content_${sectionId}`,
+            newValue: JSON.stringify(data),
+            storageArea: localStorage
+        }));
+        
+        // Force update on main site if it's open
+        updateLiveSite(sectionId, content);
+        
+    } catch (error) {
+        console.error('Save error:', error);
+        showErrorMessage('İçerik kaydedilirken bir hata oluştu!');
+    }
 }
 
 // Update live site function
@@ -275,12 +422,17 @@ function updateLiveSite(sectionId, content) {
 
 // Update data file
 function updateDataFile(sectionId, content) {
+    updateLocalDataFile(sectionId, content);
+}
+
+// Update local data file
+function updateLocalDataFile(sectionId, content) {
     try {
         let data = JSON.parse(localStorage.getItem('siteData') || '{}');
         data[sectionId] = content;
         localStorage.setItem('siteData', JSON.stringify(data));
     } catch (error) {
-        console.error('Error updating data file:', error);
+        console.error('Error updating local data file:', error);
     }
 }
 
@@ -444,27 +596,41 @@ function removePreviewItem(index) {
 }
 
 // Upload images function
-function uploadImages() {
+async function uploadImages() {
     if (uploadedImages.length === 0) {
-        alert('Lütfen yüklenecek fotoğrafları seçin!');
+        showErrorMessage('Lütfen yüklenecek fotoğrafları seçin!');
         return;
     }
     
     // Show upload progress
     showUploadProgress();
+    showLoadingMessage('Fotoğraflar yükleniyor...');
     
-    // Simulate upload process
-    setTimeout(() => {
-        // Save images to localStorage
+    try {
+        // Save images to localStorage first
         let existingImages = JSON.parse(localStorage.getItem('gallery_images') || '[]');
         
-        uploadedImages.forEach(img => {
-            existingImages.push(img.data);
-        });
+        const newImageData = uploadedImages.map(img => img.data);
+        existingImages = [...existingImages, ...newImageData];
         
         localStorage.setItem('gallery_images', JSON.stringify(existingImages));
         
-        showSuccessMessage(`${uploadedImages.length} fotoğraf başarıyla yüklendi!`);
+        // Try to save to GitHub
+        if (localStorage.getItem('github_token')) {
+            try {
+                await GitHubAPI.updateDataFile(
+                    { gallery: existingImages },
+                    `Add ${uploadedImages.length} new gallery images`
+                );
+                
+                showSuccessMessage(`${uploadedImages.length} fotoğraf GitHub'a başarıyla yüklendi!`);
+            } catch (error) {
+                console.error('GitHub gallery save error:', error);
+                showWarningMessage(`${uploadedImages.length} fotoğraf yerel olarak kaydedildi. GitHub bağlantısı kontrol ediliyor...`);
+            }
+        } else {
+            showSuccessMessage(`${uploadedImages.length} fotoğraf yerel olarak yüklendi!`);
+        }
         
         // Clear preview and input
         document.getElementById('imagePreview').innerHTML = '';
@@ -474,7 +640,11 @@ function uploadImages() {
         hideUploadProgress();
         loadGalleryImages();
         
-    }, 2000);
+    } catch (error) {
+        console.error('Upload error:', error);
+        showErrorMessage('Fotoğraflar yüklenirken bir hata oluştu!');
+        hideUploadProgress();
+    }
 }
 
 // Show upload progress
@@ -577,21 +747,92 @@ function updateLiveSite() {
 
 // Show success message
 function showSuccessMessage(message) {
-    const modal = document.getElementById('successModal');
-    const messageElement = document.getElementById('successMessage');
+    showMessage(message, 'success');
+}
+
+// Show error message
+function showErrorMessage(message) {
+    showMessage(message, 'error');
+}
+
+// Show warning message
+function showWarningMessage(message) {
+    showMessage(message, 'warning');
+}
+
+// Show loading message
+function showLoadingMessage(message) {
+    showMessage(message, 'loading');
+}
+
+// Generic message function
+function showMessage(message, type = 'success') {
+    const modal = document.getElementById('messageModal') || createMessageModal();
+    const messageElement = modal.querySelector('.message-text');
+    const iconElement = modal.querySelector('.message-icon');
     
-    if (modal && messageElement) {
+    if (messageElement && iconElement) {
         messageElement.textContent = message;
+        
+        // Update icon and styling based on type
+        modal.className = `modal message-modal ${type}`;
+        
+        switch (type) {
+            case 'success':
+                iconElement.innerHTML = '<i class="fas fa-check-circle"></i>';
+                break;
+            case 'error':
+                iconElement.innerHTML = '<i class="fas fa-exclamation-circle"></i>';
+                break;
+            case 'warning':
+                iconElement.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                break;
+            case 'loading':
+                iconElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                break;
+        }
+        
         modal.classList.add('active');
         
-        // Auto close after 3 seconds
-        setTimeout(() => {
-            closeModal('successModal');
-        }, 3000);
+        // Auto close after 3 seconds (except for loading)
+        if (type !== 'loading') {
+            setTimeout(() => {
+                closeModal('messageModal');
+            }, 3000);
+        }
     } else {
         // Fallback to alert if modal not found
         alert(message);
     }
+}
+
+// Create message modal if it doesn't exist
+function createMessageModal() {
+    const existingModal = document.getElementById('messageModal');
+    if (existingModal) {
+        return existingModal;
+    }
+    
+    const modal = document.createElement('div');
+    modal.id = 'messageModal';
+    modal.className = 'modal message-modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="message-icon"></span>
+                <h3 class="message-title">Bilgilendirme</h3>
+            </div>
+            <div class="modal-body">
+                <p class="message-text"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeModal('messageModal')">Tamam</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    return modal;
 }
 
 // Close modal
@@ -680,7 +921,7 @@ function toggleSidebar() {
 }
 
 // Contact information functions
-function saveContactInfo() {
+async function saveContactInfo() {
     if (!validateSession()) return;
     
     const contactData = {
@@ -693,30 +934,54 @@ function saveContactInfo() {
         timestamp: Date.now()
     };
     
-    // Save to localStorage
-    localStorage.setItem('contactInfo', JSON.stringify(contactData));
+    // Show loading state
+    showLoadingMessage('İletişim bilgileri kaydediliyor...');
     
-    // Update main website
-    updateMainWebsiteContact(contactData);
-    
-    // Trigger storage event for real-time updates
-    window.dispatchEvent(new StorageEvent('storage', {
-        key: 'contactInfo',
-        newValue: JSON.stringify(contactData),
-        storageArea: localStorage
-    }));
-    
-    // Broadcast to all open windows
-    if (typeof BroadcastChannel !== 'undefined') {
-        const channel = new BroadcastChannel('admin-updates');
-        channel.postMessage({
-            type: 'contact-update',
-            data: contactData,
-            timestamp: Date.now()
-        });
+    try {
+        // Save to localStorage first
+        localStorage.setItem('contactInfo', JSON.stringify(contactData));
+        
+        // Try to save to GitHub
+        if (localStorage.getItem('github_token')) {
+            try {
+                await GitHubAPI.updateDataFile(
+                    { contactInfo: contactData },
+                    'Update contact information'
+                );
+                
+                showSuccessMessage('İletişim bilgileri GitHub\'a başarıyla kaydedildi!');
+            } catch (error) {
+                console.error('GitHub contact save error:', error);
+                showWarningMessage('İletişim bilgileri yerel olarak kaydedildi. GitHub bağlantısı kontrol ediliyor...');
+            }
+        } else {
+            showSuccessMessage('İletişim bilgileri yerel olarak kaydedildi!');
+        }
+        
+        // Update main website
+        updateMainWebsiteContact(contactData);
+        
+        // Trigger storage event for real-time updates
+        window.dispatchEvent(new StorageEvent('storage', {
+            key: 'contactInfo',
+            newValue: JSON.stringify(contactData),
+            storageArea: localStorage
+        }));
+        
+        // Broadcast to all open windows
+        if (typeof BroadcastChannel !== 'undefined') {
+            const channel = new BroadcastChannel('admin-updates');
+            channel.postMessage({
+                type: 'contact-update',
+                data: contactData,
+                timestamp: Date.now()
+            });
+        }
+        
+    } catch (error) {
+        console.error('Contact save error:', error);
+        showErrorMessage('İletişim bilgileri kaydedilirken bir hata oluştu!');
     }
-    
-    showSuccessMessage('İletişim bilgileri başarıyla kaydedildi!');
 }
 
 function loadContactInfo() {
@@ -854,6 +1119,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load contact info when page loads
     loadContactInfo();
     
+    // Initialize GitHub settings
+    initGitHubSettings();
+    
+    // Load existing GitHub token if present
+    loadGitHubToken();
+    
     // Add keyboard shortcuts
     document.addEventListener('keydown', function(e) {
         // Ctrl+S to save current section
@@ -861,7 +1132,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             if (currentSection === 'iletisim') {
                 saveContactInfo();
-            } else if (currentSection !== 'dashboard' && currentSection !== 'galeri') {
+            } else if (currentSection !== 'dashboard' && currentSection !== 'galeri' && currentSection !== 'settings') {
                 saveContent(currentSection);
             }
         }
@@ -869,6 +1140,171 @@ document.addEventListener('DOMContentLoaded', function() {
         // Escape to close modals
         if (e.key === 'Escape') {
             closeModal('successModal');
+            closeModal('messageModal');
         }
     });
 });
+
+// GitHub Settings Management
+function initGitHubSettings() {
+    // Check if GitHub token exists and test connection
+    const token = localStorage.getItem('github_token');
+    if (token) {
+        testGitHubConnection();
+        
+        // Start heartbeat monitoring
+        startGitHubHeartbeat();
+    }
+}
+
+// Start monitoring GitHub connectivity
+function startGitHubHeartbeat() {
+    // Check every 60 seconds
+    setInterval(async () => {
+        if (localStorage.getItem('github_token')) {
+            const isConnected = await testGitHubConnection();
+            updateGitHubStatus(isConnected);
+        }
+    }, 60000);
+}
+
+function toggleGitHubSettings() {
+    const settingsDiv = document.getElementById('github-settings');
+    if (settingsDiv) {
+        settingsDiv.style.display = settingsDiv.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+async function saveGitHubToken() {
+    const tokenInput = document.getElementById('github-token');
+    const token = tokenInput ? tokenInput.value.trim() : '';
+    
+    if (!token) {
+        showErrorMessage('Lütfen geçerli bir GitHub token girin!');
+        return;
+    }
+    
+    // Test the token
+    showLoadingMessage('GitHub bağlantısı test ediliyor...');
+    
+    localStorage.setItem('github_token', token);
+    
+    try {
+        const isValid = await GitHubAPI.testConnection();
+        
+        if (isValid) {
+            showSuccessMessage('GitHub token başarıyla kaydedildi ve bağlantı doğrulandı!');
+            updateGitHubStatus(true);
+            
+            // Try to sync current data
+            await syncToGitHub();
+        } else {
+            localStorage.removeItem('github_token');
+            showErrorMessage('GitHub token geçersiz! Lütfen kontrol edin.');
+            updateGitHubStatus(false);
+        }
+    } catch (error) {
+        localStorage.removeItem('github_token');
+        showErrorMessage('GitHub bağlantısı test edilemedi: ' + error.message);
+        updateGitHubStatus(false);
+    }
+}
+
+async function testGitHubConnection() {
+    try {
+        const isConnected = await GitHubAPI.testConnection();
+        updateGitHubStatus(isConnected);
+        return isConnected;
+    } catch (error) {
+        updateGitHubStatus(false);
+        return false;
+    }
+}
+
+function updateGitHubStatus(isConnected) {
+    const statusElement = document.getElementById('github-status');
+    if (statusElement) {
+        if (isConnected) {
+            statusElement.innerHTML = '<i class="fas fa-check-circle" style="color: green;"></i> GitHub Bağlı';
+            statusElement.className = 'github-status connected';
+        } else {
+            statusElement.innerHTML = '<i class="fas fa-exclamation-circle" style="color: red;"></i> GitHub Bağlantısız';
+            statusElement.className = 'github-status disconnected';
+        }
+    }
+}
+
+async function syncToGitHub() {
+    if (!localStorage.getItem('github_token')) {
+        showErrorMessage('GitHub token bulunamadı!');
+        return;
+    }
+    
+    showLoadingMessage('Veriler GitHub\'a senkronize ediliyor...');
+    
+    try {
+        // Collect all local data
+        const sections = ['anasayfa', 'hakkimizda', 'hizmetler', 'yorumlar', 'iletisim', 'fiyatlistesi'];
+        const syncData = {};
+        
+        // Add content sections
+        sections.forEach(sectionId => {
+            const savedData = localStorage.getItem(`content_${sectionId}`);
+            if (savedData) {
+                try {
+                    const data = JSON.parse(savedData);
+                    syncData[sectionId] = data.content;
+                } catch (e) {
+                    console.error(`Error parsing ${sectionId}:`, e);
+                }
+            }
+        });
+        
+        // Add contact info
+        const contactInfo = localStorage.getItem('contactInfo');
+        if (contactInfo) {
+            try {
+                syncData.contactInfo = JSON.parse(contactInfo);
+            } catch (e) {
+                console.error('Error parsing contact info:', e);
+            }
+        }
+        
+        // Add gallery
+        const galleryImages = localStorage.getItem('gallery_images');
+        if (galleryImages) {
+            try {
+                syncData.gallery = JSON.parse(galleryImages);
+            } catch (e) {
+                console.error('Error parsing gallery:', e);
+            }
+        }
+        
+        await GitHubAPI.updateDataFile(syncData, 'Sync all data from admin panel');
+        showSuccessMessage('Tüm veriler GitHub\'a başarıyla senkronize edildi!');
+        
+    } catch (error) {
+        console.error('Sync error:', error);
+        showErrorMessage('Senkronizasyon hatası: ' + error.message);
+    }
+}
+
+function clearGitHubToken() {
+    localStorage.removeItem('github_token');
+    const tokenInput = document.getElementById('github-token');
+    if (tokenInput) {
+        tokenInput.value = '';
+    }
+    updateGitHubStatus(false);
+    showSuccessMessage('GitHub token temizlendi!');
+}
+
+function loadGitHubToken() {
+    const token = localStorage.getItem('github_token');
+    const tokenInput = document.getElementById('github-token');
+    if (token && tokenInput) {
+        // Show masked token for security
+        tokenInput.value = token.substring(0, 8) + '...' + token.substring(token.length - 4);
+        tokenInput.setAttribute('data-original', token);
+    }
+}
