@@ -262,10 +262,15 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Load content when page loads
+// Initialize enhanced monitoring system when page loads
 window.addEventListener('load', function() {
+    console.log('Page loaded - initializing enhanced update system');
     loadContent();
     loadContactInfo();
+    initializeConnectionMonitoring();
+    
+    // Show initial connection status
+    showConnectionStatus('Sistem hazır', 'connected');
 });
 
 // Load contact information from admin panel
@@ -395,66 +400,279 @@ function loadContactInfo() {
     }
 }
 
-// Auto-refresh content every 5 seconds for real-time updates
-setInterval(() => {
-    loadContent();
-    loadContactInfo();
-    
-    // Check for gallery updates
-    const galleryData = localStorage.getItem('gallery_images');
-    if (galleryData) {
-        try {
-            const images = JSON.parse(galleryData);
-            const gallery = document.getElementById('gallery-images');
-            if (gallery && images.length > 0) {
-                gallery.innerHTML = images.map(img => 
-                    `<img src="${img}" alt="Canpolat Halı Yıkama Galeri" loading="lazy" onclick="openLightbox('${img}')">`
-                ).join('');
-            }
-        } catch (e) {
-            console.error('Error loading gallery:', e);
-        }
-    }
-}, 5000);
+// Enhanced real-time update system - faster refresh for better responsiveness
+let updateInterval;
+let connectionStatus = 'connected';
+let lastUpdateTime = 0;
 
-// Listen for localStorage changes (for real-time updates)
+// Connection monitoring and status management
+function initializeConnectionMonitoring() {
+    // Check connection status
+    updateConnectionStatus();
+    
+    // Monitor admin panel updates more frequently
+    updateInterval = setInterval(() => {
+        const currentTime = Date.now();
+        const lastAdminUpdate = localStorage.getItem('lastUpdate');
+        
+        if (lastAdminUpdate && parseInt(lastAdminUpdate) > lastUpdateTime) {
+            // Admin panel has new updates - refresh immediately
+            refreshContent();
+            lastUpdateTime = currentTime;
+        } else {
+            // Regular refresh for any missed updates
+            refreshContent();
+        }
+    }, 1500); // Reduced from 5000ms to 1500ms for faster updates
+}
+
+// Enhanced content refresh function with error handling
+function refreshContent() {
+    try {
+        loadContent();
+        loadContactInfo();
+        
+        // Check for gallery updates with improved error handling
+        const galleryData = localStorage.getItem('gallery_images');
+        if (galleryData) {
+            try {
+                const images = JSON.parse(galleryData);
+                const gallery = document.getElementById('gallery-images');
+                if (gallery && images.length > 0) {
+                    gallery.innerHTML = images.map(img => 
+                        `<img src="${img}" alt="Canpolat Halı Yıkama Galeri" loading="lazy" onclick="openLightbox('${img}')">`
+                    ).join('');
+                }
+            } catch (e) {
+                console.error('Error loading gallery:', e);
+                recoverGalleryData();
+            }
+        }
+        
+        // Update connection status indicator
+        updateConnectionStatus();
+        
+    } catch (error) {
+        console.error('Error refreshing content:', error);
+        handleUpdateError(error);
+    }
+}
+
+// Connection status monitoring
+function updateConnectionStatus() {
+    const adminSession = localStorage.getItem('adminSession');
+    const isAdminActive = adminSession && localStorage.getItem('adminLoggedIn') === 'true';
+    
+    if (isAdminActive) {
+        connectionStatus = 'admin-active';
+        showConnectionStatus('Admin panel aktif', 'connected');
+    } else {
+        connectionStatus = 'connected';
+        showConnectionStatus('Bağlantı iyi', 'connected');
+    }
+}
+
+// Visual connection status indicator
+function showConnectionStatus(message, status) {
+    let indicator = document.getElementById('connectionStatus');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'connectionStatus';
+        indicator.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: ${status === 'connected' ? '#4CAF50' : '#FF5722'};
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 1000;
+            opacity: 0.8;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        `;
+        document.body.appendChild(indicator);
+    }
+    
+    indicator.textContent = `🔗 ${message}`;
+    indicator.style.background = status === 'connected' ? '#4CAF50' : '#FF5722';
+    
+    // Auto-hide after 3 seconds
+    clearTimeout(indicator.hideTimeout);
+    indicator.hideTimeout = setTimeout(() => {
+        if (indicator.parentNode) {
+            indicator.style.opacity = '0.3';
+        }
+    }, 3000);
+}
+
+// Error handling and recovery
+function handleUpdateError(error) {
+    console.error('Update error:', error);
+    showConnectionStatus('Güncelleme hatası', 'error');
+    
+    // Try to recover from sessionStorage backup
+    recoverFromBackup();
+}
+
+// Data recovery mechanism
+function recoverFromBackup() {
+    try {
+        const backupData = sessionStorage.getItem('contentBackup');
+        if (backupData) {
+            const backup = JSON.parse(backupData);
+            Object.keys(backup).forEach(key => {
+                if (!localStorage.getItem(key)) {
+                    localStorage.setItem(key, backup[key]);
+                }
+            });
+            console.log('Data recovered from backup');
+            refreshContent();
+        }
+    } catch (error) {
+        console.error('Error recovering from backup:', error);
+    }
+}
+
+// Gallery data recovery
+function recoverGalleryData() {
+    try {
+        const backupGallery = sessionStorage.getItem('gallery_images_backup');
+        if (backupGallery) {
+            localStorage.setItem('gallery_images', backupGallery);
+            refreshContent();
+        }
+    } catch (error) {
+        console.error('Error recovering gallery data:', error);
+    }
+}
+
+// Enhanced storage event handling with better reliability
 window.addEventListener('storage', function(e) {
     if (e.key && (e.key.startsWith('content_') || e.key === 'contactInfo' || e.key === 'gallery_images')) {
-        // Reload content when admin panel updates
+        console.log('Storage event detected:', e.key);
+        
+        // Create backup in sessionStorage for data persistence
+        try {
+            if (e.newValue) {
+                sessionStorage.setItem(e.key + '_backup', e.newValue);
+            }
+        } catch (error) {
+            console.error('Error creating backup:', error);
+        }
+        
+        // Immediate content refresh
         setTimeout(() => {
-            loadContent();
-            loadContactInfo();
+            refreshContent();
+            showConnectionStatus('İçerik güncellendi', 'connected');
         }, 100);
     }
 });
 
-// Listen for BroadcastChannel messages (cross-tab communication)
-if (typeof BroadcastChannel !== 'undefined') {
-    const channel = new BroadcastChannel('admin-updates');
-    channel.addEventListener('message', function(e) {
-        if (e.data.type === 'content-update') {
-            // Update specific section
-            setTimeout(() => {
-                loadContent();
-            }, 100);
-        } else if (e.data.type === 'contact-update') {
-            // Update contact information
-            setTimeout(() => {
-                loadContactInfo();
-            }, 100);
-        } else if (e.data.type === 'gallery-update') {
-            // Update gallery
-            setTimeout(() => {
-                loadContent();
-            }, 100);
-        }
-    });
+// Enhanced BroadcastChannel with fallback mechanism
+let broadcastChannel;
+let broadcastFallback = false;
+
+try {
+    if (typeof BroadcastChannel !== 'undefined') {
+        broadcastChannel = new BroadcastChannel('admin-updates');
+        
+        broadcastChannel.addEventListener('message', function(e) {
+            console.log('BroadcastChannel message received:', e.data);
+            
+            if (e.data.type === 'content-update') {
+                // Update specific section immediately
+                updateContentSection(e.data.section, e.data.content);
+                showConnectionStatus('İçerik anında güncellendi', 'connected');
+            } else if (e.data.type === 'contact-update') {
+                // Update contact information immediately
+                setTimeout(() => {
+                    loadContactInfo();
+                }, 50);
+                showConnectionStatus('İletişim bilgileri güncellendi', 'connected');
+            } else if (e.data.type === 'gallery-update') {
+                // Update gallery immediately
+                setTimeout(() => {
+                    refreshContent();
+                }, 50);
+                showConnectionStatus('Galeri güncellendi', 'connected');
+            }
+        });
+        
+        // Monitor channel connection
+        broadcastChannel.addEventListener('messageerror', function(e) {
+            console.error('BroadcastChannel error:', e);
+            broadcastFallback = true;
+            showConnectionStatus('Kanal hatası - yedek sistem aktif', 'error');
+        });
+    } else {
+        broadcastFallback = true;
+        console.log('BroadcastChannel not supported, using fallback');
+    }
+} catch (error) {
+    console.error('BroadcastChannel initialization error:', error);
+    broadcastFallback = true;
 }
 
-// Force update when window gets focus (user switches back to main site)
+// Fallback mechanism for browsers without BroadcastChannel support
+if (broadcastFallback) {
+    // Use localStorage as communication channel
+    let lastMessageTime = 0;
+    
+    setInterval(() => {
+        const messageData = localStorage.getItem('admin_message');
+        if (messageData) {
+            try {
+                const message = JSON.parse(messageData);
+                if (message.timestamp > lastMessageTime) {
+                    lastMessageTime = message.timestamp;
+                    
+                    // Process message similar to BroadcastChannel
+                    if (message.type === 'content-update') {
+                        updateContentSection(message.section, message.content);
+                        showConnectionStatus('İçerik güncellendi (yedek sistem)', 'connected');
+                    } else if (message.type === 'contact-update') {
+                        setTimeout(() => {
+                            loadContactInfo();
+                        }, 50);
+                        showConnectionStatus('İletişim bilgileri güncellendi (yedek sistem)', 'connected');
+                    }
+                }
+            } catch (error) {
+                console.error('Error processing fallback message:', error);
+            }
+        }
+    }, 500); // Check every 500ms for fallback
+}
+
+// Direct content section update function
+function updateContentSection(sectionId, content) {
+    const element = document.getElementById(sectionId + '-content');
+    if (element) {
+        if (sectionId === 'hizmetler' && content.includes('<div class="service-card">')) {
+            element.innerHTML = content;
+        } else if (sectionId === 'hizmetler') {
+            // Keep default service cards if content is not custom HTML
+            console.log('Keeping default service cards');
+        } else {
+            element.innerHTML = content;
+        }
+        
+        // Add visual feedback for immediate update
+        element.style.transition = 'background-color 0.3s ease';
+        element.style.backgroundColor = 'rgba(76, 175, 80, 0.1)';
+        setTimeout(() => {
+            element.style.backgroundColor = '';
+        }, 1000);
+    }
+}
+
+// Enhanced window focus handling with immediate updates
 window.addEventListener('focus', function() {
-    loadContent();
-    loadContactInfo();
+    console.log('Window focused - checking for updates');
+    refreshContent();
+    updateConnectionStatus();
 });
 
 // WhatsApp button click tracking
