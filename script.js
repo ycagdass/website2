@@ -4,19 +4,28 @@ function toggleMobileMenu() {
     nav.classList.toggle('active');
 }
 
-// Load content from data.json
+// Load content from GitHub or data.json
 async function loadContent() {
     try {
-        // Priority 1: Load from admin panel (localStorage)
+        // Priority 1: Try to load from GitHub if possible
+        const githubData = await loadFromGitHub();
+        if (githubData) {
+            updateContent(githubData);
+            // Cache to localStorage for offline access
+            cacheDataLocally(githubData);
+            return;
+        }
+        
+        // Priority 2: Load from admin panel (localStorage)
         const hasAdminData = loadFromLocalStorage();
         
-        // Priority 2: Load contact info from admin panel
+        // Priority 3: Load contact info from admin panel
         loadContactInfo();
         
-        // Priority 3: Try to load from JSON file (fallback)
+        // Priority 4: Try to load from JSON file (fallback)
         if (!hasAdminData) {
             try {
-                const response = await fetch('data.json');
+                const response = await fetch(`data.json?t=${Date.now()}`);
                 if (response.ok) {
                     const data = await response.json();
                     updateContent(data);
@@ -28,6 +37,59 @@ async function loadContent() {
     } catch (error) {
         console.log('Loading from localStorage due to:', error);
         loadFromLocalStorage();
+    }
+}
+
+// Load content from GitHub
+async function loadFromGitHub() {
+    try {
+        // Use cache-busting timestamp
+        const timestamp = Date.now();
+        const response = await fetch(`https://raw.githubusercontent.com/ycagdass/website2/main/data.json?t=${timestamp}`);
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Content loaded from GitHub');
+            return data;
+        }
+    } catch (error) {
+        console.log('GitHub fetch failed:', error);
+    }
+    return null;
+}
+
+// Cache data locally for offline access
+function cacheDataLocally(data) {
+    try {
+        // Cache the entire data object
+        localStorage.setItem('github_cache', JSON.stringify(data));
+        localStorage.setItem('github_cache_timestamp', Date.now().toString());
+        
+        // Also cache individual sections for compatibility
+        Object.keys(data).forEach(key => {
+            if (typeof data[key] === 'string') {
+                const sectionData = {
+                    section: key,
+                    content: data[key],
+                    timestamp: new Date().toISOString(),
+                    fromGitHub: true
+                };
+                localStorage.setItem(`content_${key}`, JSON.stringify(sectionData));
+            }
+        });
+        
+        // Cache contact info separately if it exists
+        if (data.contactInfo) {
+            localStorage.setItem('contactInfo', JSON.stringify(data.contactInfo));
+        }
+        
+        // Cache gallery if it exists
+        if (data.gallery && Array.isArray(data.gallery)) {
+            localStorage.setItem('gallery_images', JSON.stringify(data.gallery));
+        }
+        
+    } catch (error) {
+        console.error('Error caching data locally:', error);
     }
 }
 
@@ -396,7 +458,20 @@ function loadContactInfo() {
 }
 
 // Auto-refresh content every 5 seconds for real-time updates
-setInterval(() => {
+setInterval(async () => {
+    // Try to load from GitHub first
+    try {
+        const githubData = await loadFromGitHub();
+        if (githubData) {
+            updateContent(githubData);
+            cacheDataLocally(githubData);
+            return;
+        }
+    } catch (error) {
+        console.log('GitHub auto-refresh failed, using localStorage');
+    }
+    
+    // Fallback to localStorage
     loadContent();
     loadContactInfo();
     

@@ -80,6 +80,10 @@
                         <i class="fas fa-list-ul"></i>
                         <span>Fiyat Listesi</span>
                     </li>
+                    <li class="nav-item" data-section="settings">
+                        <i class="fas fa-cog"></i>
+                        <span>GitHub Ayarları</span>
+                    </li>
                 </ul>
             </nav>
             <div class="sidebar-footer">
@@ -349,6 +353,77 @@
                             <button class="btn btn-secondary" onclick="previewContent('fiyatlistesi')">
                                 <i class="fas fa-eye"></i> Önizle
                             </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- GitHub Settings Section -->
+            <section id="settings-section" class="content-section">
+                <div class="editor-card">
+                    <div class="editor-header">
+                        <h3><i class="fas fa-cog"></i> GitHub Entegrasyonu</h3>
+                        <p>GitHub tabanlı senkronizasyon ayarları</p>
+                    </div>
+                    <div class="editor-body">
+                        <div class="settings-info">
+                            <div class="info-card">
+                                <h4><i class="fas fa-info-circle"></i> GitHub Entegrasyonu Hakkında</h4>
+                                <p>GitHub entegrasyonu ile admin panelinden yapılan değişiklikler tüm cihazlarda, tüm tarayıcılarda ve tüm kullanıcılarda görünür hale gelir.</p>
+                                <ul>
+                                    <li>✓ Değişiklikler gerçek zamanlı olarak GitHub'a kaydedilir</li>
+                                    <li>✓ Ana site GitHub'dan güncel veriyi çeker</li>
+                                    <li>✓ Tüm cihazlarda senkronizasyon</li>
+                                    <li>✓ Yedekleme ve versiyon kontrolü</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="github-status-section">
+                            <h4>Bağlantı Durumu</h4>
+                            <div id="github-status" class="github-status disconnected">
+                                <i class="fas fa-exclamation-circle" style="color: red;"></i> GitHub Bağlantısız
+                            </div>
+                        </div>
+                        
+                        <div class="github-token-section">
+                            <h4>GitHub Personal Access Token</h4>
+                            <div class="form-group">
+                                <label for="github-token">Personal Access Token:</label>
+                                <input type="password" id="github-token" class="form-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+                                <small class="form-help">
+                                    GitHub Settings > Developer settings > Personal access tokens > Generate new token<br>
+                                    Gerekli izinler: <strong>repo</strong> (tüm repository erişimi)
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="github-actions">
+                            <button class="btn btn-primary" onclick="saveGitHubToken()">
+                                <i class="fas fa-save"></i> Token Kaydet ve Test Et
+                            </button>
+                            <button class="btn btn-secondary" onclick="testGitHubConnection()">
+                                <i class="fas fa-plug"></i> Bağlantıyı Test Et
+                            </button>
+                            <button class="btn btn-success" onclick="syncToGitHub()">
+                                <i class="fas fa-sync"></i> Verileri GitHub'a Senkronize Et
+                            </button>
+                            <button class="btn btn-danger" onclick="clearGitHubToken()">
+                                <i class="fas fa-trash"></i> Token Temizle
+                            </button>
+                        </div>
+                        
+                        <div class="github-instructions">
+                            <h4>GitHub Token Nasıl Oluşturulur?</h4>
+                            <ol>
+                                <li>GitHub.com'da giriş yapın</li>
+                                <li>Settings > Developer settings > Personal access tokens'a gidin</li>
+                                <li>"Generate new token" butonuna tıklayın</li>
+                                <li>Token'a bir isim verin (örn: "Website Admin Panel")</li>
+                                <li><strong>repo</strong> iznini seçin (tüm repository izinleri)</li>
+                                <li>"Generate token" butonuna tıklayın</li>
+                                <li>Oluşan token'ı kopyalayın ve yukarıdaki alana yapıştırın</li>
+                            </ol>
                         </div>
                     </div>
                 </div>
