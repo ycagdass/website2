@@ -1,11 +1,151 @@
-<html>
+<!DOCTYPE html>
+<html lang="tr">
 <head>
-    <title>Admin</title>
-    <script src="github-api.js"></script>
-    <script src="admin.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canpolat Admin Paneli</title>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="Admin Panel - Yetkilendirilmiş personel için">
+    <link rel="stylesheet" href="admin.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
-    <h1>Admin Page</h1>
-    <!-- Admin content goes here -->
+    <!-- Login Section -->
+    <div class="login-container" id="loginContainer">
+        <div class="login-card">
+            <div class="login-header">
+                <img src="logo.svg" alt="Canpolat Logo" class="login-logo">
+                <h2>Admin Paneli</h2>
+                <p>İçerik yönetim sistemi</p>
+            </div>
+            <form id="loginForm" class="login-form">
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="username" placeholder="Kullanıcı Adı" required>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="password" placeholder="Şifre" required>
+                </div>
+                <button type="submit" class="login-btn">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Giriş Yap
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div class="admin-container" id="adminContainer" style="display:none;">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="logo.svg" alt="Canpolat Logo" class="sidebar-logo">
+                <h3>Admin Panel</h3>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="nav-item active" data-section="dashboard">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </li>
+                    <li class="nav-item" data-section="anasayfa">
+                        <i class="fas fa-home"></i>
+                        <span>Ana Sayfa</span>
+                    </li>
+                    <li class="nav-item" data-section="hakkimizda">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Hakkımızda</span>
+                    </li>
+                    <li class="nav-item" data-section="hizmetler">
+                        <i class="fas fa-cogs"></i>
+                        <span>Hizmetlerimiz</span>
+                    </li>
+                    <li class="nav-item" data-section="galeri">
+                        <i class="fas fa-images"></i>
+                        <span>Galeri</span>
+                    </li>
+                    <li class="nav-item" data-section="yorumlar">
+                        <i class="fas fa-comments"></i>
+                        <span>Yorumlar</span>
+                    </li>
+                    <li class="nav-item" data-section="iletisim">
+                        <i class="fas fa-phone"></i>
+                        <span>İletişim</span>
+                    </li>
+                    <li class="nav-item" data-section="fiyatlistesi">
+                        <i class="fas fa-list-ul"></i>
+                        <span>Fiyat Listesi</span>
+                    </li>
+                    <li class="nav-item" data-section="settings">
+                        <i class="fas fa-cog"></i>
+                        <span>GitHub Ayarları</span>
+                    </li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Çıkış Yap
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="content-header">
+                <div class="header-left">
+                    <h1 id="sectionTitle">Dashboard</h1>
+                    <p id="sectionSubtitle">Sistem genel durumu</p>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-primary" onclick="window.open('index.html', '_blank')">
+                        <i class="fas fa-external-link-alt"></i>
+                        Siteyi Görüntüle
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dashboard Section -->
+            <!-- ... (diğer HTML içerikleri aynen kalıyor) ... -->
+
+            <!-- GitHub Settings Section -->
+            <section id="settings-section" class="content-section">
+                <div class="editor-card">
+                    <div class="editor-header">
+                        <h3><i class="fas fa-cog"></i> GitHub Entegrasyonu</h3>
+                        <p>GitHub tabanlı senkronizasyon ayarları</p>
+                    </div>
+                    <div class="editor-body">
+                        <!-- ... (GitHub entegrasyon ayarları içerikleri) ... -->
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <i class="fas fa-check-circle"></i>
+                <h3>Başarılı!</h3>
+            </div>
+            <div class="modal-body">
+                <p id="successMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeModal('successModal')">Tamam</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GITHUB API ENTEGRASYONU EKLENDİ -->
+    <script src="github-api.js"></script>
+    <script src="admin.js"></script>
 </body>
 </html>
