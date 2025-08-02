@@ -4,36 +4,40 @@ function toggleMobileMenu() {
     nav.classList.toggle('active');
 }
 
-// Load content from GitHub or data.json
+// Load content from GitHub or data.json - Optimized for cPanel hosting
 async function loadContent() {
     try {
-        // Priority 1: Try to load from GitHub if possible
-        const githubData = await loadFromGitHub();
-        if (githubData) {
-            updateContent(githubData);
-            // Cache to localStorage for offline access
-            cacheDataLocally(githubData);
-            showNetworkStatus('github');
-            return;
-        }
-        
-        // Priority 2: Load from admin panel (localStorage)
+        // Priority 1: Load from admin panel (localStorage) for immediate response
         const hasAdminData = loadFromLocalStorage();
         
-        // Priority 3: Load contact info from admin panel
+        // Priority 2: Load contact info from admin panel
         loadContactInfo();
         
-        // Priority 4: Try to load from JSON file (fallback)
+        // Priority 3: Try to load from GitHub for updates (background process)
+        try {
+            const githubData = await loadFromGitHub();
+            if (githubData) {
+                updateContent(githubData);
+                cacheDataLocally(githubData);
+                showNetworkStatus('github');
+                return;
+            }
+        } catch (error) {
+            console.log('GitHub sync in background failed:', error);
+        }
+        
+        // Priority 4: Try to load from JSON file (cPanel local fallback)
         if (!hasAdminData) {
             try {
-                const response = await fetch(`data.json?t=${Date.now()}`);
+                // Use relative path for cPanel hosting
+                const response = await fetch(`./data.json?t=${Date.now()}`);
                 if (response.ok) {
                     const data = await response.json();
                     updateContent(data);
                     showNetworkStatus('local');
                 }
             } catch (error) {
-                console.log('JSON file not found, using defaults');
+                console.log('Local JSON file not found, using defaults');
                 showNetworkStatus('offline');
             }
         } else {
@@ -97,33 +101,42 @@ function showNetworkStatus(mode) {
     }
 }
 
-// Load content from GitHub
+// Load content from GitHub - Enhanced for cPanel hosting with GitHub integration
 async function loadFromGitHub() {
     try {
         // Check cache first to avoid unnecessary requests
         const cachedData = getCachedGitHubData();
         const cacheAge = Date.now() - parseInt(localStorage.getItem('github_cache_timestamp') || '0');
         
-        // Use cache if it's less than 10 seconds old (to reduce API calls)
-        if (cachedData && cacheAge < 10000) {
-            console.log('Using recent GitHub cache');
+        // Use cache if it's less than 30 seconds old (optimized for cPanel hosting)
+        if (cachedData && cacheAge < 30000) {
+            console.log('Using recent GitHub cache for cPanel hosting');
             return cachedData;
         }
         
-        // Use cache-busting timestamp
+        // GitHub raw content URL with cache-busting
         const timestamp = Date.now();
-        const response = await fetch(`https://raw.githubusercontent.com/ycagdass/website2/main/data.json?t=${timestamp}`, {
+        const githubUrl = `https://raw.githubusercontent.com/ycagdass/website2/main/data.json?t=${timestamp}`;
+        
+        const fetchOptions = {
             method: 'GET',
             headers: {
                 'Cache-Control': 'no-cache, no-store, must-revalidate',
                 'Pragma': 'no-cache',
                 'Expires': '0'
             }
-        });
+        };
+        
+        // Add timeout if AbortSignal is supported (modern browsers)
+        if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) {
+            fetchOptions.signal = AbortSignal.timeout(10000); // 10 second timeout
+        }
+        
+        const response = await fetch(githubUrl, fetchOptions);
         
         if (response.ok) {
             const data = await response.json();
-            console.log('Content loaded from GitHub');
+            console.log('Content loaded from GitHub for cPanel hosting');
             
             // Check if data has metadata and is newer than cached data
             if (data._metadata) {
@@ -133,19 +146,26 @@ async function loadFromGitHub() {
                     new Date(0);
                 
                 if (newTimestamp <= cachedTimestamp) {
-                    console.log('Cached data is newer, using cache');
+                    console.log('Cached data is newer, using cache for cPanel');
                     return cachedData;
                 }
                 
-                console.log(`Loading updated content from GitHub (version: ${data._metadata.version})`);
+                console.log(`Loading updated content from GitHub for cPanel (version: ${data._metadata.version})`);
             }
             
             return data;
         } else {
-            console.log('GitHub response not OK:', response.status);
+            console.log('GitHub response not OK for cPanel hosting:', response.status);
         }
     } catch (error) {
-        console.log('GitHub fetch failed:', error);
+        console.log('GitHub fetch failed for cPanel hosting:', error);
+        
+        // Return cached data as fallback for cPanel hosting
+        const cachedData = getCachedGitHubData();
+        if (cachedData) {
+            console.log('Using cached GitHub data as fallback for cPanel');
+            return cachedData;
+        }
     }
     return null;
 }
