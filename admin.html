@@ -121,7 +121,100 @@
                         <p>GitHub tabanlı senkronizasyon ayarları</p>
                     </div>
                     <div class="editor-body">
-                        <!-- ... (GitHub entegrasyon ayarları içerikleri) ... -->
+                        <!-- GitHub Token Input -->
+                        <div class="form-group">
+                            <label for="githubToken">
+                                <i class="fab fa-github"></i> GitHub Personal Access Token
+                            </label>
+                            <div class="input-with-button">
+                                <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" class="form-control">
+                                <button type="button" onclick="toggleTokenVisibility()" class="btn btn-secondary" title="Şifreyi Göster/Gizle">
+                                    <i class="fas fa-eye" id="tokenVisibilityIcon"></i>
+                                </button>
+                            </div>
+                            <small class="form-help">
+                                <i class="fas fa-info-circle"></i>
+                                GitHub Personal Access Token oluşturmak için: 
+                                <a href="https://github.com/settings/tokens" target="_blank">GitHub Settings → Tokens</a>
+                                (Gerekli izinler: repo)
+                            </small>
+                        </div>
+
+                        <!-- GitHub Status -->
+                        <div class="form-group">
+                            <label>Bağlantı Durumu</label>
+                            <div id="github-status" class="github-status disconnected">
+                                <i class="fas fa-exclamation-circle"></i> GitHub Bağlantısız
+                            </div>
+                        </div>
+
+                        <!-- GitHub Actions -->
+                        <div class="form-group">
+                            <label>Eylemler</label>
+                            <div class="button-group">
+                                <button type="button" onclick="saveGitHubToken()" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Token Kaydet & Test Et
+                                </button>
+                                <button type="button" onclick="testGitHubConnection()" class="btn btn-info">
+                                    <i class="fas fa-wifi"></i> Bağlantıyı Test Et
+                                </button>
+                                <button type="button" onclick="syncToGitHub()" class="btn btn-success" id="syncButton">
+                                    <i class="fas fa-sync-alt"></i> Manuel Senkronizasyon
+                                </button>
+                                <button type="button" onclick="clearGitHubToken()" class="btn btn-danger">
+                                    <i class="fas fa-trash"></i> Token Temizle
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Sync Status -->
+                        <div class="form-group">
+                            <label>Senkronizasyon Durumu</label>
+                            <div id="sync-status" class="sync-status">
+                                <div class="sync-info">
+                                    <div class="sync-item">
+                                        <span>Son Senkronizasyon:</span>
+                                        <span id="lastSyncTime">-</span>
+                                    </div>
+                                    <div class="sync-item">
+                                        <span>Otomatik Sync:</span>
+                                        <span id="autoSyncStatus">Aktif</span>
+                                    </div>
+                                    <div class="sync-item">
+                                        <span>GitHub Repository:</span>
+                                        <span>ycagdass/website2</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- GitHub Instructions -->
+                        <div class="form-group">
+                            <label>Nasıl Çalışır?</label>
+                            <div class="github-help">
+                                <div class="help-item">
+                                    <i class="fas fa-1"></i>
+                                    <div>
+                                        <strong>Token Oluştur:</strong>
+                                        GitHub hesabınızdan Personal Access Token oluşturun (repo izni gerekli)
+                                    </div>
+                                </div>
+                                <div class="help-item">
+                                    <i class="fas fa-2"></i>
+                                    <div>
+                                        <strong>Token Kaydet:</strong>
+                                        Token'ı yukarıdaki alana yapıştırın ve "Token Kaydet & Test Et" butonuna tıklayın
+                                    </div>
+                                </div>
+                                <div class="help-item">
+                                    <i class="fas fa-3"></i>
+                                    <div>
+                                        <strong>Otomatik Sync:</strong>
+                                        Artık admin panelinden yaptığınız değişiklikler 5-10 saniye içinde tüm kullanıcılara yansıyacak
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
