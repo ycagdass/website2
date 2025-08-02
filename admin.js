@@ -217,59 +217,211 @@ function updateSectionHeader(sectionName) {
     document.getElementById('sectionSubtitle').textContent = subtitles[sectionName] || '';
 }
 
-// Save content function
+// Enhanced save content function with backup and better error handling
 function saveContent(sectionId) {
     if (!validateSession()) return;
     
     const contentElement = document.getElementById(sectionId + '-content');
     if (!contentElement) {
-        alert('İçerik alanı bulunamadı!');
+        showErrorMessage('İçerik alanı bulunamadı!');
         return;
     }
     
     const content = contentElement.value;
     
-    // Save to localStorage with timestamp
-    const data = {
-        section: sectionId,
-        content: content,
-        timestamp: new Date().toISOString(),
-        updated: Date.now()
-    };
+    // Validate content length
+    if (content.length === 0) {
+        showErrorMessage('İçerik boş olamaz!');
+        return;
+    }
     
-    localStorage.setItem(`content_${sectionId}`, JSON.stringify(data));
-    
-    // Update data.json in memory (for demo)
-    updateDataFile(sectionId, content);
-    
-    // Trigger storage event for real-time updates
-    window.dispatchEvent(new StorageEvent('storage', {
-        key: `content_${sectionId}`,
-        newValue: JSON.stringify(data),
-        storageArea: localStorage
-    }));
-    
-    // Show success message
-    showSuccessMessage(`${getSectionDisplayName(sectionId)} içeriği başarıyla kaydedildi!`);
-    
-    // Force update on main site if it's open
-    updateLiveSite(sectionId, content);
+    try {
+        // Save to localStorage with timestamp
+        const data = {
+            section: sectionId,
+            content: content,
+            timestamp: new Date().toISOString(),
+            updated: Date.now()
+        };
+        
+        localStorage.setItem(`content_${sectionId}`, JSON.stringify(data));
+        
+        // Create backup in sessionStorage for data persistence
+        sessionStorage.setItem(`content_${sectionId}_backup`, JSON.stringify(data));
+        
+        // Update comprehensive backup
+        updateComprehensiveBackup(sectionId, data);
+        
+        // Update data.json in memory (for demo)
+        updateDataFile(sectionId, content);
+        
+        // Enhanced live site update with multiple mechanisms
+        updateLiveSiteEnhanced(sectionId, content);
+        
+        // Show success message with status
+        showSuccessMessage(`${getSectionDisplayName(sectionId)} içeriği başarıyla kaydedildi!`);
+        
+        // Show save indicator
+        showSaveIndicator('saved');
+        
+    } catch (error) {
+        console.error('Error saving content:', error);
+        showErrorMessage('Kaydetme sırasında hata oluştu: ' + error.message);
+        showSaveIndicator('error');
+    }
 }
 
-// Update live site function
-function updateLiveSite(sectionId, content) {
-    // This function notifies other windows/tabs about the update
+// Comprehensive backup system
+function updateComprehensiveBackup(sectionId, data) {
+    try {
+        // Get existing backup
+        let backup = JSON.parse(sessionStorage.getItem('contentBackup') || '{}');
+        backup[`content_${sectionId}`] = JSON.stringify(data);
+        backup.lastUpdate = Date.now();
+        
+        // Store updated backup
+        sessionStorage.setItem('contentBackup', JSON.stringify(backup));
+        
+        console.log('Backup updated for section:', sectionId);
+    } catch (error) {
+        console.error('Error updating backup:', error);
+    }
+}
+
+// Enhanced live site update function with multiple notification methods
+function updateLiveSiteEnhanced(sectionId, content) {
+    // Update last update timestamp
     localStorage.setItem('lastUpdate', Date.now());
     
-    // Broadcast to all open windows
-    if (typeof BroadcastChannel !== 'undefined') {
-        const channel = new BroadcastChannel('admin-updates');
-        channel.postMessage({
+    // Method 1: BroadcastChannel with error handling
+    try {
+        if (typeof BroadcastChannel !== 'undefined') {
+            const channel = new BroadcastChannel('admin-updates');
+            channel.postMessage({
+                type: 'content-update',
+                section: sectionId,
+                content: content,
+                timestamp: Date.now()
+            });
+            console.log('BroadcastChannel message sent');
+        }
+    } catch (error) {
+        console.error('BroadcastChannel error:', error);
+    }
+    
+    // Method 2: Fallback localStorage messaging
+    try {
+        const message = {
             type: 'content-update',
             section: sectionId,
             content: content,
             timestamp: Date.now()
-        });
+        };
+        localStorage.setItem('admin_message', JSON.stringify(message));
+        
+        // Clean up message after 5 seconds
+        setTimeout(() => {
+            localStorage.removeItem('admin_message');
+        }, 5000);
+    } catch (error) {
+        console.error('Fallback messaging error:', error);
+    }
+    
+    // Method 3: Enhanced storage event trigger
+    try {
+        window.dispatchEvent(new StorageEvent('storage', {
+            key: `content_${sectionId}`,
+            newValue: JSON.stringify({
+                section: sectionId,
+                content: content,
+                timestamp: Date.now()
+            }),
+            storageArea: localStorage
+        }));
+    } catch (error) {
+        console.error('Storage event error:', error);
+    }
+}
+
+// Visual save indicator
+function showSaveIndicator(status) {
+    let indicator = document.getElementById('saveIndicator');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'saveIndicator';
+        indicator.style.cssText = `
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 1002;
+            opacity: 0;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        `;
+        document.body.appendChild(indicator);
+    }
+    
+    if (status === 'saved') {
+        indicator.textContent = '✅ Kaydedildi';
+        indicator.style.background = '#4CAF50';
+        indicator.style.color = 'white';
+    } else if (status === 'error') {
+        indicator.textContent = '❌ Hata';
+        indicator.style.background = '#FF5722';
+        indicator.style.color = 'white';
+    } else if (status === 'saving') {
+        indicator.textContent = '💾 Kaydediliyor...';
+        indicator.style.background = '#FF9800';
+        indicator.style.color = 'white';
+    }
+    
+    indicator.style.opacity = '1';
+    
+    setTimeout(() => {
+        indicator.style.opacity = '0';
+    }, 3000);
+}
+
+// Enhanced error message function
+function showErrorMessage(message) {
+    let errorModal = document.getElementById('errorModal');
+    
+    if (!errorModal) {
+        // Create error modal if it doesn't exist
+        errorModal = document.createElement('div');
+        errorModal.id = 'errorModal';
+        errorModal.className = 'modal';
+        errorModal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <i class="fas fa-exclamation-triangle" style="color: #FF5722;"></i>
+                    <h3>Hata!</h3>
+                </div>
+                <div class="modal-body">
+                    <p id="errorMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" onclick="closeModal('errorModal')">Tamam</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(errorModal);
+    }
+    
+    const messageElement = document.getElementById('errorMessage');
+    if (messageElement) {
+        messageElement.textContent = message;
+        errorModal.classList.add('active');
+        
+        // Auto close after 5 seconds
+        setTimeout(() => {
+            closeModal('errorModal');
+        }, 5000);
     }
 }
 
@@ -443,37 +595,63 @@ function removePreviewItem(index) {
     }
 }
 
-// Upload images function
+// Enhanced upload images function with better error handling and backup
 function uploadImages() {
     if (uploadedImages.length === 0) {
-        alert('Lütfen yüklenecek fotoğrafları seçin!');
+        showErrorMessage('Lütfen yüklenecek fotoğrafları seçin!');
         return;
     }
     
     // Show upload progress
     showUploadProgress();
+    showSaveIndicator('saving');
     
-    // Simulate upload process
+    // Simulate upload process with error handling
     setTimeout(() => {
-        // Save images to localStorage
-        let existingImages = JSON.parse(localStorage.getItem('gallery_images') || '[]');
-        
-        uploadedImages.forEach(img => {
-            existingImages.push(img.data);
-        });
-        
-        localStorage.setItem('gallery_images', JSON.stringify(existingImages));
-        
-        showSuccessMessage(`${uploadedImages.length} fotoğraf başarıyla yüklendi!`);
-        
-        // Clear preview and input
-        document.getElementById('imagePreview').innerHTML = '';
-        document.getElementById('galeri-images').value = '';
-        uploadedImages = [];
-        
-        hideUploadProgress();
-        loadGalleryImages();
-        
+        try {
+            // Save images to localStorage
+            let existingImages = JSON.parse(localStorage.getItem('gallery_images') || '[]');
+            
+            // Validate image data
+            const validImages = uploadedImages.filter(img => img.data && img.data.startsWith('data:image/'));
+            
+            if (validImages.length === 0) {
+                throw new Error('Geçerli fotoğraf bulunamadı');
+            }
+            
+            validImages.forEach(img => {
+                existingImages.push(img.data);
+            });
+            
+            // Save to localStorage
+            localStorage.setItem('gallery_images', JSON.stringify(existingImages));
+            
+            // Create backup in sessionStorage
+            sessionStorage.setItem('gallery_images_backup', JSON.stringify(existingImages));
+            
+            // Update comprehensive backup
+            updateGalleryBackup(existingImages);
+            
+            // Enhanced live update notification
+            updateGalleryLiveEnhanced();
+            
+            showSuccessMessage(`${validImages.length} fotoğraf başarıyla yüklendi!`);
+            showSaveIndicator('saved');
+            
+            // Clear preview and input
+            document.getElementById('imagePreview').innerHTML = '';
+            document.getElementById('galeri-images').value = '';
+            uploadedImages = [];
+            
+            hideUploadProgress();
+            loadGalleryImages();
+            
+        } catch (error) {
+            console.error('Upload error:', error);
+            showErrorMessage('Fotoğraf yüklemede hata: ' + error.message);
+            showSaveIndicator('error');
+            hideUploadProgress();
+        }
     }, 2000);
 }
 
@@ -522,14 +700,78 @@ function loadGalleryImages() {
     });
 }
 
-// Remove gallery image
+// Enhanced remove gallery image with better error handling
 function removeGalleryImage(index) {
-    let images = JSON.parse(localStorage.getItem('gallery_images') || '[]');
-    images.splice(index, 1);
-    localStorage.setItem('gallery_images', JSON.stringify(images));
-    loadGalleryImages();
-    showSuccessMessage('Fotoğraf silindi!');
-    updateLiveSite();
+    try {
+        let images = JSON.parse(localStorage.getItem('gallery_images') || '[]');
+        
+        if (index < 0 || index >= images.length) {
+            showErrorMessage('Geçersiz fotoğraf indeksi!');
+            return;
+        }
+        
+        images.splice(index, 1);
+        localStorage.setItem('gallery_images', JSON.stringify(images));
+        
+        // Update backup
+        sessionStorage.setItem('gallery_images_backup', JSON.stringify(images));
+        updateGalleryBackup(images);
+        
+        loadGalleryImages();
+        showSuccessMessage('Fotoğraf silindi!');
+        
+        // Notify live site
+        updateGalleryLiveEnhanced();
+        
+    } catch (error) {
+        console.error('Error removing gallery image:', error);
+        showErrorMessage('Fotoğraf silinirken hata oluştu: ' + error.message);
+    }
+}
+
+// Gallery backup system
+function updateGalleryBackup(images) {
+    try {
+        let backup = JSON.parse(sessionStorage.getItem('contentBackup') || '{}');
+        backup.gallery_images = JSON.stringify(images);
+        backup.lastGalleryUpdate = Date.now();
+        sessionStorage.setItem('contentBackup', JSON.stringify(backup));
+    } catch (error) {
+        console.error('Error updating gallery backup:', error);
+    }
+}
+
+// Enhanced gallery live site update
+function updateGalleryLiveEnhanced() {
+    localStorage.setItem('lastUpdate', Date.now());
+    
+    try {
+        // Method 1: BroadcastChannel
+        if (typeof BroadcastChannel !== 'undefined') {
+            const channel = new BroadcastChannel('admin-updates');
+            channel.postMessage({
+                type: 'gallery-update',
+                timestamp: Date.now()
+            });
+        }
+        
+        // Method 2: Fallback messaging
+        const message = {
+            type: 'gallery-update',
+            timestamp: Date.now()
+        };
+        localStorage.setItem('admin_message', JSON.stringify(message));
+        
+        // Method 3: Storage event
+        window.dispatchEvent(new StorageEvent('storage', {
+            key: 'gallery_images',
+            newValue: localStorage.getItem('gallery_images'),
+            storageArea: localStorage
+        }));
+        
+    } catch (error) {
+        console.error('Error updating gallery live site:', error);
+    }
 }
 
 // Load existing content
@@ -616,33 +858,102 @@ function getSectionDisplayName(sectionId) {
     return names[sectionId] || sectionId;
 }
 
-// Auto-save functionality
+// Enhanced auto-save functionality with conflict detection and better error handling
 function enableAutoSave() {
     const textareas = document.querySelectorAll('.content-editor');
     
     textareas.forEach(textarea => {
         let timeout;
+        let lastSavedContent = textarea.value;
+        let isAutoSaving = false;
+        
         textarea.addEventListener('input', function() {
             clearTimeout(timeout);
+            
+            // Show auto-save pending indicator
+            showAutoSaveStatus('pending');
+            
             timeout = setTimeout(() => {
-                const sectionId = this.id.replace('-content', '');
-                const data = {
-                    section: sectionId,
-                    content: this.value,
-                    timestamp: new Date().toISOString(),
-                    autoSaved: true
-                };
-                localStorage.setItem(`autosave_${sectionId}`, JSON.stringify(data));
+                if (isAutoSaving) return; // Prevent multiple simultaneous auto-saves
                 
-                // Show auto-save indicator
-                showAutoSaveIndicator();
-            }, 3000);
+                const currentContent = this.value;
+                const sectionId = this.id.replace('-content', '');
+                
+                // Skip auto-save if content hasn't changed
+                if (currentContent === lastSavedContent) {
+                    return;
+                }
+                
+                // Conflict detection - check if content was modified by another session
+                const existingData = localStorage.getItem(`content_${sectionId}`);
+                if (existingData) {
+                    try {
+                        const existing = JSON.parse(existingData);
+                        if (existing.content !== lastSavedContent && existing.content !== currentContent) {
+                            // Conflict detected
+                            showAutoSaveConflict(sectionId, currentContent, existing.content);
+                            return;
+                        }
+                    } catch (error) {
+                        console.error('Error checking for conflicts:', error);
+                    }
+                }
+                
+                isAutoSaving = true;
+                showAutoSaveStatus('saving');
+                
+                try {
+                    const data = {
+                        section: sectionId,
+                        content: currentContent,
+                        timestamp: new Date().toISOString(),
+                        autoSaved: true,
+                        lastEditor: localStorage.getItem('adminSession') || 'unknown'
+                    };
+                    
+                    // Save to localStorage
+                    localStorage.setItem(`autosave_${sectionId}`, JSON.stringify(data));
+                    
+                    // Create backup
+                    sessionStorage.setItem(`autosave_${sectionId}_backup`, JSON.stringify(data));
+                    
+                    // Update last saved content
+                    lastSavedContent = currentContent;
+                    
+                    // Show success indicator
+                    showAutoSaveStatus('saved');
+                    
+                    // Notify other tabs about auto-save
+                    notifyAutoSave(sectionId, currentContent);
+                    
+                } catch (error) {
+                    console.error('Auto-save error:', error);
+                    showAutoSaveStatus('error');
+                } finally {
+                    isAutoSaving = false;
+                }
+            }, 2000); // Reduced from 3000ms to 2000ms for faster auto-save
+        });
+        
+        // Handle focus loss - immediate auto-save
+        textarea.addEventListener('blur', function() {
+            clearTimeout(timeout);
+            const currentContent = this.value;
+            const sectionId = this.id.replace('-content', '');
+            
+            if (currentContent !== lastSavedContent && !isAutoSaving) {
+                // Force immediate auto-save on blur
+                setTimeout(() => {
+                    const event = new Event('input');
+                    this.dispatchEvent(event);
+                }, 100);
+            }
         });
     });
 }
 
-// Show auto-save indicator
-function showAutoSaveIndicator() {
+// Auto-save status indicator
+function showAutoSaveStatus(status) {
     let indicator = document.getElementById('autoSaveIndicator');
     if (!indicator) {
         indicator = document.createElement('div');
@@ -651,24 +962,126 @@ function showAutoSaveIndicator() {
             position: fixed;
             top: 20px;
             right: 20px;
-            background: #4CAF50;
-            color: white;
             padding: 10px 15px;
             border-radius: 5px;
             font-size: 14px;
             z-index: 1001;
             opacity: 0;
             transition: opacity 0.3s ease;
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
         `;
         document.body.appendChild(indicator);
     }
     
-    indicator.textContent = '💾 Otomatik kaydedildi';
+    switch (status) {
+        case 'pending':
+            indicator.textContent = '⏳ Otomatik kayıt bekliyor...';
+            indicator.style.background = '#FFA726';
+            indicator.style.color = 'white';
+            break;
+        case 'saving':
+            indicator.textContent = '💾 Otomatik kaydediliyor...';
+            indicator.style.background = '#42A5F5';
+            indicator.style.color = 'white';
+            break;
+        case 'saved':
+            indicator.textContent = '✅ Otomatik kaydedildi';
+            indicator.style.background = '#4CAF50';
+            indicator.style.color = 'white';
+            break;
+        case 'error':
+            indicator.textContent = '❌ Otomatik kayıt hatası';
+            indicator.style.background = '#FF5722';
+            indicator.style.color = 'white';
+            break;
+    }
+    
     indicator.style.opacity = '1';
     
-    setTimeout(() => {
-        indicator.style.opacity = '0';
-    }, 2000);
+    if (status === 'saved' || status === 'error') {
+        setTimeout(() => {
+            indicator.style.opacity = '0';
+        }, 2000);
+    }
+}
+
+// Conflict detection and resolution
+function showAutoSaveConflict(sectionId, currentContent, existingContent) {
+    const conflictModal = document.createElement('div');
+    conflictModal.className = 'modal active';
+    conflictModal.id = 'conflictModal';
+    conflictModal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <i class="fas fa-exclamation-triangle" style="color: #FF9800;"></i>
+                <h3>İçerik Çakışması Tespit Edildi</h3>
+            </div>
+            <div class="modal-body">
+                <p>Bu içerik başka bir oturumda değiştirilmiş. Hangi versiyonu tutmak istiyorsunuz?</p>
+                <div style="display: flex; gap: 15px; margin-top: 15px;">
+                    <button class="btn btn-primary" onclick="resolveConflict('${sectionId}', 'current')">
+                        Benim Değişikliklerimi Tut
+                    </button>
+                    <button class="btn btn-secondary" onclick="resolveConflict('${sectionId}', 'existing')">
+                        Diğer Değişiklikleri Tut
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(conflictModal);
+    
+    // Store conflict data for resolution
+    window.conflictData = {
+        sectionId: sectionId,
+        currentContent: currentContent,
+        existingContent: existingContent
+    };
+}
+
+// Resolve auto-save conflicts
+function resolveConflict(sectionId, choice) {
+    const conflictData = window.conflictData;
+    if (!conflictData) return;
+    
+    const textareaElement = document.getElementById(sectionId + '-content');
+    if (!textareaElement) return;
+    
+    if (choice === 'current') {
+        // Keep current content and force save
+        saveContent(sectionId);
+    } else {
+        // Load existing content
+        textareaElement.value = conflictData.existingContent;
+        showSuccessMessage('İçerik diğer oturumdan yüklendi.');
+    }
+    
+    // Close conflict modal
+    const conflictModal = document.getElementById('conflictModal');
+    if (conflictModal) {
+        document.body.removeChild(conflictModal);
+    }
+    
+    delete window.conflictData;
+}
+
+// Notify other tabs about auto-save
+function notifyAutoSave(sectionId, content) {
+    try {
+        if (typeof BroadcastChannel !== 'undefined') {
+            const channel = new BroadcastChannel('admin-updates');
+            channel.postMessage({
+                type: 'autosave-update',
+                section: sectionId,
+                content: content,
+                timestamp: Date.now()
+            });
+        }
+    } catch (error) {
+        console.error('Error notifying auto-save:', error);
+    }
 }
 
 // Mobile sidebar toggle
@@ -679,44 +1092,98 @@ function toggleSidebar() {
     }
 }
 
-// Contact information functions
+// Enhanced contact information save function
 function saveContactInfo() {
     if (!validateSession()) return;
     
-    const contactData = {
-        phone1: document.getElementById('phone1').value,
-        phone2: document.getElementById('phone2').value,
-        whatsapp: document.getElementById('whatsapp').value,
-        workingHours: document.getElementById('working-hours').value,
-        serviceArea: document.getElementById('service-area').value,
-        address: document.getElementById('address').value,
-        timestamp: Date.now()
-    };
+    try {
+        const contactData = {
+            phone1: document.getElementById('phone1').value,
+            phone2: document.getElementById('phone2').value,
+            whatsapp: document.getElementById('whatsapp').value,
+            workingHours: document.getElementById('working-hours').value,
+            serviceArea: document.getElementById('service-area').value,
+            address: document.getElementById('address').value,
+            timestamp: Date.now()
+        };
+        
+        // Validate required fields
+        if (!contactData.phone1 || !contactData.phone2) {
+            showErrorMessage('Telefon numaraları zorunludur!');
+            return;
+        }
+        
+        // Save to localStorage
+        localStorage.setItem('contactInfo', JSON.stringify(contactData));
+        
+        // Create backup in sessionStorage
+        sessionStorage.setItem('contactInfo_backup', JSON.stringify(contactData));
+        
+        // Update comprehensive backup
+        updateContactBackup(contactData);
+        
+        // Update main website
+        updateMainWebsiteContact(contactData);
+        
+        // Enhanced live site update with multiple notification methods
+        updateContactLiveEnhanced(contactData);
+        
+        showSuccessMessage('İletişim bilgileri başarıyla kaydedildi!');
+        showSaveIndicator('saved');
+        
+    } catch (error) {
+        console.error('Error saving contact info:', error);
+        showErrorMessage('İletişim bilgileri kaydedilirken hata oluştu: ' + error.message);
+        showSaveIndicator('error');
+    }
+}
+
+// Contact backup system
+function updateContactBackup(contactData) {
+    try {
+        let backup = JSON.parse(sessionStorage.getItem('contentBackup') || '{}');
+        backup.contactInfo = JSON.stringify(contactData);
+        backup.lastContactUpdate = Date.now();
+        sessionStorage.setItem('contentBackup', JSON.stringify(backup));
+    } catch (error) {
+        console.error('Error updating contact backup:', error);
+    }
+}
+
+// Enhanced contact live site update
+function updateContactLiveEnhanced(contactData) {
+    // Update last update timestamp
+    localStorage.setItem('lastUpdate', Date.now());
     
-    // Save to localStorage
-    localStorage.setItem('contactInfo', JSON.stringify(contactData));
-    
-    // Update main website
-    updateMainWebsiteContact(contactData);
-    
-    // Trigger storage event for real-time updates
-    window.dispatchEvent(new StorageEvent('storage', {
-        key: 'contactInfo',
-        newValue: JSON.stringify(contactData),
-        storageArea: localStorage
-    }));
-    
-    // Broadcast to all open windows
-    if (typeof BroadcastChannel !== 'undefined') {
-        const channel = new BroadcastChannel('admin-updates');
-        channel.postMessage({
+    try {
+        // Method 1: BroadcastChannel
+        if (typeof BroadcastChannel !== 'undefined') {
+            const channel = new BroadcastChannel('admin-updates');
+            channel.postMessage({
+                type: 'contact-update',
+                data: contactData,
+                timestamp: Date.now()
+            });
+        }
+        
+        // Method 2: Fallback localStorage messaging
+        const message = {
             type: 'contact-update',
             data: contactData,
             timestamp: Date.now()
-        });
+        };
+        localStorage.setItem('admin_message', JSON.stringify(message));
+        
+        // Method 3: Storage event trigger
+        window.dispatchEvent(new StorageEvent('storage', {
+            key: 'contactInfo',
+            newValue: JSON.stringify(contactData),
+            storageArea: localStorage
+        }));
+        
+    } catch (error) {
+        console.error('Error updating contact live site:', error);
     }
-    
-    showSuccessMessage('İletişim bilgileri başarıyla kaydedildi!');
 }
 
 function loadContactInfo() {
