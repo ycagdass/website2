@@ -388,3 +388,26 @@ window.initializeNavigation = initializeNavigation;
 window.addEventListener('beforeunload', function() {
     stopAutoSync();
 });
+
+// Simple login bypass for testing (remove in production)
+document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            // Simple demo credentials (replace with proper authentication)
+            if ((username === 'admin' && password === 'admin') || 
+                (username === 'demo' && password === 'demo')) {
+                const loginContainer = document.getElementById('loginContainer');
+                const adminContainer = document.getElementById('adminContainer');
+                if (loginContainer) loginContainer.style.display = 'none';
+                if (adminContainer) adminContainer.style.display = 'block';
+            } else {
+                alert('Geçersiz kullanıcı adı veya şifre!');
+            }
+        });
+    }
+});
