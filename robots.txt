@@ -8,4 +8,4 @@ Disallow: /admin.css
 Disallow: /admin.js
 
 # Sitemap
-Sitemap: https://ycagdass.github.io/website2/sitemap.xml
+Sitemap: https://www.canpolathaliyikamakayseri.com.tr/sitemap.xml

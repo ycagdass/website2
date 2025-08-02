@@ -1,0 +1,102 @@
+# Apache .htaccess Configuration for cPanel Hosting
+# Canpolat Halı ve Koltuk Yıkama Website
+
+# Enable URL Rewriting
+RewriteEngine On
+
+# Security Headers
+Header always set X-Content-Type-Options nosniff
+Header always set X-Frame-Options DENY
+Header always set X-XSS-Protection "1; mode=block"
+Header always set Referrer-Policy "strict-origin-when-cross-origin"
+Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+
+# HTTPS Redirect (if SSL certificate is available)
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# WWW Redirect
+RewriteCond %{HTTP_HOST} !^www\. [NC]
+RewriteRule ^(.*)$ https://www.%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Clean URLs - Remove .html extension
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^([^\.]+)$ $1.html [NC,L]
+
+# Admin Panel Security (optional - if admin.html is used)
+<Files "admin.html">
+    # Allow only specific IP addresses (uncomment and modify as needed)
+    # Require ip 192.168.1.0/24
+    # Require ip YOUR_IP_ADDRESS
+    
+    # Password protection (uncomment if needed)
+    # AuthType Basic
+    # AuthName "Admin Area"
+    # AuthUserFile /path/to/.htpasswd
+    # Require valid-user
+</Files>
+
+# Block access to sensitive files
+<FilesMatch "\.(env|log|ini|conf|sql|bak|backup)$">
+    Require all denied
+</FilesMatch>
+
+# Block access to git files
+<FilesMatch "^\.git">
+    Require all denied
+</FilesMatch>
+
+# Enable Gzip Compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/xml
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE application/json
+</IfModule>
+
+# Browser Caching
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType image/x-icon "access plus 1 year"
+    ExpiresByType application/pdf "access plus 1 month"
+    ExpiresByType text/html "access plus 1 day"
+</IfModule>
+
+# Custom Error Pages
+ErrorDocument 404 /index.html
+ErrorDocument 403 /index.html
+ErrorDocument 500 /index.html
+
+# Default Document
+DirectoryIndex index.html index.htm
+
+# CORS Headers for API requests
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+</IfModule>
+
+# Prevent hotlinking of images
+RewriteCond %{HTTP_REFERER} !^$
+RewriteCond %{HTTP_REFERER} !^https?://(www\.)?canpolathaliyikamakayseri\.com\.tr [NC]
+RewriteRule \.(jpg|jpeg|png|gif|svg)$ - [F]
+
+# Mobile Detection and Optimization
+<IfModule mod_setenvif.c>
+    SetEnvIfNoCase User-Agent "Mobile|Android|iPhone|iPad|iPod|BlackBerry|Windows Phone" mobile
+</IfModule>

@@ -24,26 +24,27 @@ class GitHubAPI {
         };
     }
 
-    // Rate limiting state
+    // Rate limiting state - Enhanced for cPanel hosting
     static rateLimit = {
         remaining: 5000,
         reset: null,
-        used: 0
+        used: 0,
+        isHostedOnCPanel: true // Flag for cPanel specific optimizations
     };
 
-    // Check rate limit status
+    // Check rate limit status - cPanel hosting aware
     static checkRateLimit() {
         const now = new Date();
         if (this.rateLimit.reset && now < new Date(this.rateLimit.reset)) {
-            if (this.rateLimit.remaining <= 0) {
+            if (this.rateLimit.remaining <= 10) { // More conservative for cPanel
                 const resetTime = new Date(this.rateLimit.reset);
                 const waitTime = Math.ceil((resetTime - now) / 1000);
-                throw new Error(`Rate limit exceeded. Try again in ${waitTime} seconds.`);
+                throw new Error(`Rate limit approaching. Try again in ${waitTime} seconds.`);
             }
         }
     }
 
-    // Update rate limit from response headers
+    // Update rate limit from response headers - cPanel optimized
     static updateRateLimit(response) {
         const remaining = response.headers.get('x-ratelimit-remaining');
         const reset = response.headers.get('x-ratelimit-reset');
@@ -53,7 +54,13 @@ class GitHubAPI {
         if (reset) this.rateLimit.reset = new Date(parseInt(reset) * 1000);
         if (used) this.rateLimit.used = parseInt(used);
 
-        console.log(`GitHub API Rate Limit - Remaining: ${this.rateLimit.remaining}, Used: ${this.rateLimit.used}`);
+        // Log with cPanel context
+        console.log(`GitHub API Rate Limit (cPanel hosting) - Remaining: ${this.rateLimit.remaining}, Used: ${this.rateLimit.used}`);
+        
+        // Warn if rate limit is getting low for cPanel hosting
+        if (this.rateLimit.remaining < 100) {
+            console.warn('GitHub API rate limit is running low for cPanel hosting environment');
+        }
     }
 
     // Retry logic with exponential backoff

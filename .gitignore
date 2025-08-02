@@ -40,3 +40,22 @@ logs
 # Backup files
 *.bak
 *.backup
+
+# cPanel specific files
+.htpasswd
+error_log
+access_log
+.well-known/
+cpanel_stats/
+cgi-bin/
+_vti_*
+.ftpquota
+
+# SSL certificates (if stored locally)
+*.crt
+*.key
+*.pem
+
+# Database backups
+*.sql
+*.sql.gz
