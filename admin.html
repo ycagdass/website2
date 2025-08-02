@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canpolat Admin Paneli</title>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="Admin Panel - Yetkilendirilmiş personel için">
+    <link rel="stylesheet" href="admin.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Login Section -->
+    <div class="login-container" id="loginContainer">
+        <div class="login-card">
+            <div class="login-header">
+                <img src="logo.png" alt="Canpolat Logo" class="login-logo">
+                <h2>Admin Paneli</h2>
+                <p>İçerik yönetim sistemi</p>
+            </div>
+            <form id="loginForm" class="login-form">
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="username" placeholder="Kullanıcı Adı" required>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="password" placeholder="Şifre" required>
+                </div>
+                <button type="submit" class="login-btn">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Giriş Yap
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div class="admin-container" id="adminContainer" style="display:none;">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="logo.png" alt="Canpolat Logo" class="sidebar-logo">
+                <h3>Admin Panel</h3>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="nav-item active" data-section="dashboard">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </li>
+                    <li class="nav-item" data-section="anasayfa">
+                        <i class="fas fa-home"></i>
+                        <span>Ana Sayfa</span>
+                    </li>
+                    <li class="nav-item" data-section="hakkimizda">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Hakkımızda</span>
+                    </li>
+                    <li class="nav-item" data-section="hizmetler">
+                        <i class="fas fa-cogs"></i>
+                        <span>Hizmetlerimiz</span>
+                    </li>
+                    <li class="nav-item" data-section="galeri">
+                        <i class="fas fa-images"></i>
+                        <span>Galeri</span>
+                    </li>
+                    <li class="nav-item" data-section="yorumlar">
+                        <i class="fas fa-comments"></i>
+                        <span>Yorumlar</span>
+                    </li>
+                    <li class="nav-item" data-section="iletisim">
+                        <i class="fas fa-phone"></i>
+                        <span>İletişim</span>
+                    </li>
+                    <li class="nav-item" data-section="fiyatlistesi">
+                        <i class="fas fa-list-ul"></i>
+                        <span>Fiyat Listesi</span>
+                    </li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Çıkış Yap
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="content-header">
+                <div class="header-left">
+                    <h1 id="sectionTitle">Dashboard</h1>
+                    <p id="sectionSubtitle">Sistem genel durumu</p>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-primary" onclick="window.open('index.html', '_blank')">
+                        <i class="fas fa-external-link-alt"></i>
+                        Siteyi Görüntüle
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dashboard Section -->
+            <section id="dashboard-section" class="content-section active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>2,543</h3>
+                            <p>Toplam Görüntülenme</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-phone"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>156</h3>
+                            <p>Toplam Arama</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>4.8</h3>
+                            <p>Müşteri Memnuniyeti</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-calendar"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>42</h3>
+                            <p>Bu Ay Hizmet</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="dashboard-cards">
+                    <div class="dashboard-card">
+                        <h3><i class="fas fa-clock"></i> Son Aktiviteler</h3>
+                        <ul class="activity-list">
+                            <li>Ana sayfa içeriği güncellendi</li>
+                            <li>Yeni galeri fotoğrafı eklendi</li>
+                            <li>Fiyat listesi düzenlendi</li>
+                            <li>Müşteri yorumu onaylandı</li>
+                        </ul>
+                    </div>
+                    <div class="dashboard-card">
+                        <h3><i class="fas fa-chart-line"></i> Hızlı İşlemler</h3>
+                        <div class="quick-actions">
+                            <button class="quick-btn" onclick="showSection('galeri')">
+                                <i class="fas fa-plus"></i> Fotoğraf Ekle
+                            </button>
+                            <button class="quick-btn" onclick="showSection('yorumlar')">
+                                <i class="fas fa-comment"></i> Yorum Ekle
+                            </button>
+                            <button class="quick-btn" onclick="showSection('fiyatlistesi')">
+                                <i class="fas fa-edit"></i> Fiyat Güncelle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Ana Sayfa Section -->
+            <section id="anasayfa-section" class="content-section">
+                <div class="editor-card">
+                    <div class="editor-header">
+                        <h3><i class="fas fa-home"></i> Ana Sayfa İçeriği</h3>
+                        <p>Ana sayfa hero bölümündeki açıklama metni</p>
+                    </div>
+                    <div class="editor-body">
+                        <textarea id="anasayfa-content" class="content-editor" placeholder="Ana sayfa içeriği...">7/24 247 14 00 hizmetinizde! Profesyonel halı ve koltuk yıkama hizmeti.</textarea>
+                        <div class="editor-actions">
+                            <button class="btn btn-primary" onclick="saveContent('anasayfa')">
+                                <i class="fas fa-save"></i> Kaydet
+                            </button>
+                            <button class="btn btn-secondary" onclick="previewContent('anasayfa')">
+                                <i class="fas fa-eye"></i> Önizle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Hakkımızda Section -->
+            <section id="hakkimizda-section" class="content-section">
+                <div class="editor-card">
+                    <div class="editor-header">
+                        <h3><i class="fas fa-info-circle"></i> Hakkımızda İçeriği</h3>
+                        <p>Şirket hakkında bilgiler</p>
+                    </div>
+                    <div class="editor-body">
+                        <textarea id="hakkimizda-content" class="content-editor" placeholder="Hakkımızda içeriği..."></textarea>
+                        <div class="editor-actions">
+                            <button class="btn btn-primary" onclick="saveContent('hakkimizda')">
+                                <i class="fas fa-save"></i> Kaydet
+                            </button>
+                            <button class="btn btn-secondary" onclick="previewContent('hakkimizda')">
+                                <i class="fas fa-eye"></i> Önizle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Hizmetler Section -->
+            <section id="hizmetler-section" class="content-section">
+                <div class="editor-card">
+                    <div class="editor-header">
+                        <h3><i class="fas fa-cogs"></i> Hizmetlerimiz</h3>
+                        <p>Sunduğunuz hizmetler hakkında bilgi</p>
+                    </div>
+                    <div class="editor-body">
+                        <textarea id="hizmetler-content" class="content-editor" placeholder="Hizmetler içeriği..."></textarea>
+                        <div class="editor-actions">
+                            <button class="btn btn-primary" onclick="saveContent('hizmetler')">
+                                <i class="fas fa-save"></i> Kaydet
+                            </button>
+                            <button class="btn btn-secondary" onclick="previewContent('hizmetler')">
+                                <i class="fas fa-eye"></i> Önizle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Galeri Section -->
+            <section id="galeri-section" class="content-section">
+                <div class="editor-card">
+                    <div class="editor-header">
+                        <h3><i class="fas fa-images"></i> Galeri Yönetimi</h3>
+                        <p>Fotoğraf yükleme ve düzenleme</p>
+                    </div>
+                    <div class="editor-body">
+                        <div class="upload-area">
+                            <div class="upload-zone" onclick="document.getElementById('galeri-images').click()">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <h4>Fotoğraf Yükle</h4>
+                                <p>Dosyaları buraya sürükleyin veya tıklayın</p>
+                            </div>
+                            <input type="file" id="galeri-images" multiple accept="image/*" style="display:none;">
+                        </div>
+                        <div class="image-preview" id="imagePreview"></div>
+                        <div class="editor-actions">
+                            <button class="btn btn-primary" onclick="uploadImages()">
+                                <i class="fas fa-upload"></i> Yükle
+                            </button>
+                            <button class="btn btn-secondary" onclick="loadGalleryImages()">
+                                <i class="fas fa-sync"></i> Yenile
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Yorumlar Section -->
+            <section id="yorumlar-section" class="content-section">
+                <div class="editor-card">
+                    <div class="editor-header">
+                        <h3><i class="fas fa-comments"></i> Müşteri Yorumları</h3>
+                        <p>Müşteri deneyimleri ve yorumları</p>
+                    </div>
+                    <div class="editor-body">
+                        <textarea id="yorumlar-content" class="content-editor" placeholder="Müşteri yorumları..."></textarea>
+                        <div class="editor-actions">
+                            <button class="btn btn-primary" onclick="saveContent('yorumlar')">
+                                <i class="fas fa-save"></i> Kaydet
+                            </button>
+                            <button class="btn btn-secondary" onclick="previewContent('yorumlar')">
+                                <i class="fas fa-eye"></i> Önizle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- İletişim Section -->
+            <section id="iletisim-section" class="content-section">
+                <div class="editor-card">
+                    <div class="editor-header">
+                        <h3><i class="fas fa-phone"></i> İletişim Bilgileri</h3>
+                        <p>Telefon numaraları, adres ve çalışma saatleri</p>
+                    </div>
+                    <div class="editor-body">
+                        <div class="contact-forms">
+                            <div class="form-group">
+                                <label for="phone1">Ana Telefon Numarası:</label>
+                                <input type="tel" id="phone1" class="form-input" placeholder="247 14 00" value="247 14 00">
+                            </div>
+                            <div class="form-group">
+                                <label for="phone2">GSM Numarası:</label>
+                                <input type="tel" id="phone2" class="form-input" placeholder="05352578978" value="05352578978">
+                            </div>
+                            <div class="form-group">
+                                <label for="whatsapp">WhatsApp Numarası:</label>
+                                <input type="tel" id="whatsapp" class="form-input" placeholder="902471400" value="902471400">
+                            </div>
+                            <div class="form-group">
+                                <label for="working-hours">Çalışma Saatleri:</label>
+                                <input type="text" id="working-hours" class="form-input" placeholder="7/24 Hizmet" value="7/24 Hizmet">
+                            </div>
+                            <div class="form-group">
+                                <label for="service-area">Hizmet Alanı:</label>
+                                <textarea id="service-area" class="form-textarea" rows="3" placeholder="Şehir merkezi ve tüm ilçeler"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="address">Adres:</label>
+                                <textarea id="address" class="form-textarea" rows="3" placeholder="Tam adres bilgisi"></textarea>
+                            </div>
+                        </div>
+                        <div class="editor-actions">
+                            <button class="btn btn-primary" onclick="saveContactInfo()">
+                                <i class="fas fa-save"></i> İletişim Bilgilerini Kaydet
+                            </button>
+                            <button class="btn btn-secondary" onclick="previewContactInfo()">
+                                <i class="fas fa-eye"></i> Önizle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Fiyat Listesi Section -->
+            <section id="fiyatlistesi-section" class="content-section">
+                <div class="editor-card">
+                    <div class="editor-header">
+                        <h3><i class="fas fa-list-ul"></i> Fiyat Listesi</h3>
+                        <p>Hizmet fiyatları ve paketler</p>
+                    </div>
+                    <div class="editor-body">
+                        <textarea id="fiyatlistesi-content" class="content-editor" placeholder="Fiyat listesi..."></textarea>
+                        <div class="editor-actions">
+                            <button class="btn btn-primary" onclick="saveContent('fiyatlistesi')">
+                                <i class="fas fa-save"></i> Kaydet
+                            </button>
+                            <button class="btn btn-secondary" onclick="previewContent('fiyatlistesi')">
+                                <i class="fas fa-eye"></i> Önizle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <i class="fas fa-check-circle"></i>
+                <h3>Başarılı!</h3>
+            </div>
+            <div class="modal-body">
+                <p id="successMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeModal('successModal')">Tamam</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>

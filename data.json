@@ -1,0 +1,16 @@
+{
+  "anasayfa": "7/24 0535 257 89 78 & 247 14 00 hizmetinizde! Profesyonel halı ve koltuk yıkama hizmeti.",
+  "hakkimizda": "<h3>Yılların Deneyimi</h3><p>Canpolat Halı ve Koltuk Yıkama olarak 15 yılı aşkın deneyimimizle İstanbul genelinde kaliteli hizmet sunuyoruz. Modern ekipmanlarımız ve uzman kadromuzla halı, koltuk ve döşeme temizliğinde sektörün önde gelen firmalarından biriyiz.</p><br><h4>Neden Bizi Seçmelisiniz?</h4><ul><li>✓ 15+ yıl deneyim</li><li>✓ Profesyonel ekipman</li><li>✓ Çevre dostu temizlik ürünleri</li><li>✓ 7/24 hizmet</li><li>✓ Ücretsiz nakliye</li><li>✓ Garanti belgesi</li></ul>",
+  "hizmetler": "",
+  "yorumlar": "<div class='reviews-grid'><div class='review-card'><div class='review-stars'>★★★★★</div><p>'Halılarım tertemiz oldu, çok memnun kaldım. Kesinlikle tavsiye ederim!'</p><span>- Ayşe Hanım, Kadıköy</span></div><div class='review-card'><div class='review-stars'>★★★★★</div><p>'Koltuk takımım yeni almış gibi oldu. Çok profesyonel hizmet!'</p><span>- Mehmet Bey, Üsküdar</span></div><div class='review-card'><div class='review-stars'>★★★★★</div><p>'7/24 hizmet vermeleri çok güzel. Gece geç saatte bile geldiler.'</p><span>- Fatma Hanım, Beşiktaş</span></div></div>",
+  "iletisim": "",
+  "fiyatlistesi": "<div class='price-cards'><div class='price-card'><h3>Halı Yıkama</h3><div class='price-list'><div class='price-item'><span>Küçük Halı (1-3 m²)</span><span>₺150</span></div><div class='price-item'><span>Orta Halı (4-6 m²)</span><span>₺250</span></div><div class='price-item'><span>Büyük Halı (7-10 m²)</span><span>₺350</span></div><div class='price-item'><span>Çok Büyük Halı (10+ m²)</span><span>₺450</span></div></div></div><div class='price-card'><h3>Koltuk Yıkama</h3><div class='price-list'><div class='price-item'><span>Tekli Koltuk</span><span>₺200</span></div><div class='price-item'><span>İkili Koltuk</span><span>₺300</span></div><div class='price-item'><span>Üçlü Koltuk</span><span>₺400</span></div><div class='price-item'><span>Köşe Takımı</span><span>₺600</span></div></div></div><div class='price-card'><h3>Özel Hizmetler</h3><div class='price-list'><div class='price-item'><span>Leke Çıkarma</span><span>₺100</span></div><div class='price-item'><span>Antibakteriyel</span><span>₺50</span></div><div class='price-item'><span>Hızlı Kurutma</span><span>₺75</span></div><div class='price-item'><span>Aynı Gün Teslimat</span><span>₺100</span></div></div></div></div>",
+  "gallery": [
+    "https://via.placeholder.com/400x300/8B2635/ffffff?text=Halı+Yıkama+1",
+    "https://via.placeholder.com/400x300/FF6F3C/ffffff?text=Koltuk+Yıkama+1",
+    "https://via.placeholder.com/400x300/FF8C42/ffffff?text=Araç+İçi+1",
+    "https://via.placeholder.com/400x300/8B2635/ffffff?text=Halı+Yıkama+2",
+    "https://via.placeholder.com/400x300/FF6F3C/ffffff?text=Koltuk+Yıkama+2",
+    "https://via.placeholder.com/400x300/FF8C42/ffffff?text=Araç+İçi+2"
+  ]
+}

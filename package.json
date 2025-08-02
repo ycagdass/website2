@@ -1,0 +1,24 @@
+{
+  "name": "canpolat-hali-yikama",
+  "version": "1.0.0",
+  "description": "Canpolat Halı ve Koltuk Yıkama Website",
+  "main": "index.html",
+  "scripts": {
+    "start": "echo 'Static website - no server needed'",
+    "build": "echo 'No build process required'",
+    "dev": "npx http-server . -p 3000"
+  },
+  "keywords": [
+    "carpet-cleaning",
+    "furniture-cleaning",
+    "professional-cleaning",
+    "istanbul",
+    "hali-yikama",
+    "koltuk-yikama"
+  ],
+  "author": "Canpolat Halı ve Koltuk Yıkama",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

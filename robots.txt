@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Allow admin panel for authorized users only
+User-agent: *
+Disallow: /admin.html
+Disallow: /admin.css
+Disallow: /admin.js
+
+# Sitemap
+Sitemap: https://ycagdass.github.io/website2/sitemap.xml
