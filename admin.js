@@ -1125,6 +1125,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load existing GitHub token if present
     loadGitHubToken();
     
+    // Initialize GitHub token input event handlers
+    initGitHubTokenInput();
+    
     // Add keyboard shortcuts
     document.addEventListener('keydown', function(e) {
         // Ctrl+S to save current section
@@ -1144,6 +1147,56 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// Initialize GitHub token input handlers
+function initGitHubTokenInput() {
+    const tokenInput = document.getElementById('githubToken');
+    if (tokenInput) {
+        // Handle focus - show original token for editing if it's masked
+        tokenInput.addEventListener('focus', function() {
+            const originalToken = this.getAttribute('data-original');
+            if (originalToken && this.value.includes('...')) {
+                this.type = 'password';
+                this.value = originalToken;
+                // Update toggle button icon
+                const toggleBtn = document.querySelector('.token-toggle-btn i');
+                if (toggleBtn) {
+                    toggleBtn.className = 'fas fa-eye';
+                }
+            }
+        });
+        
+        // Handle blur - mask token if it hasn't changed
+        tokenInput.addEventListener('blur', function() {
+            const originalToken = this.getAttribute('data-original');
+            const currentValue = this.value.trim();
+            
+            // If the value is the same as original and not currently visible, mask it again
+            if (originalToken && currentValue === originalToken && this.type === 'password') {
+                maskTokenInput(originalToken);
+            }
+        });
+        
+        // Handle input changes - detect when user starts typing a new token
+        tokenInput.addEventListener('input', function() {
+            const originalToken = this.getAttribute('data-original');
+            const currentValue = this.value.trim();
+            
+            // If user is typing something different from the masked or original value
+            if (this.type === 'text' && this.value.includes('...')) {
+                // User clicked on masked field, clear it for new input
+                this.type = 'password';
+                this.value = '';
+                this.removeAttribute('data-original');
+                // Update toggle button icon
+                const toggleBtn = document.querySelector('.token-toggle-btn i');
+                if (toggleBtn) {
+                    toggleBtn.className = 'fas fa-eye';
+                }
+            }
+        });
+    }
+}
 
 // GitHub Settings Management
 function initGitHubSettings() {
@@ -1177,34 +1230,66 @@ function toggleGitHubSettings() {
 
 async function saveGitHubToken() {
     const tokenInput = document.getElementById('githubToken');
-    const token = tokenInput ? tokenInput.value.trim() : '';
+    if (!tokenInput) {
+        showErrorMessage('Token input alanı bulunamadı!');
+        return;
+    }
     
-    if (!token) {
+    // Get the original token from data-original attribute, or the input value if it's a new token
+    let token = tokenInput.getAttribute('data-original') || tokenInput.value.trim();
+    
+    // If the input value is different from the masked value and not empty, use the new input value
+    const currentValue = tokenInput.value.trim();
+    if (currentValue && !currentValue.includes('...') && currentValue !== token) {
+        token = currentValue;
+    }
+    
+    if (!token || token.includes('...')) {
         showErrorMessage('Lütfen geçerli bir GitHub token girin!');
+        return;
+    }
+    
+    // Validate token format (GitHub personal access tokens start with 'ghp_' and are 40+ characters)
+    if (!token.startsWith('ghp_') || token.length < 40) {
+        showErrorMessage('Geçersiz GitHub token formatı! Token "ghp_" ile başlamalı ve en az 40 karakter olmalıdır.');
         return;
     }
     
     // Test the token
     showLoadingMessage('GitHub bağlantısı test ediliyor...');
     
+    // Temporarily store the token for testing
+    const previousToken = localStorage.getItem('githubToken');
     localStorage.setItem('githubToken', token);
     
     try {
         const isValid = await GitHubAPI.testConnection();
         
         if (isValid) {
+            // Token is valid, update the display with masking
+            maskTokenInput(token);
             showSuccessMessage('GitHub token başarıyla kaydedildi ve bağlantı doğrulandı!');
             updateGitHubStatus(true);
             
             // Try to sync current data
             await syncToGitHub();
         } else {
-            localStorage.removeItem('githubToken');
-            showErrorMessage('GitHub token geçersiz! Lütfen kontrol edin.');
+            // Restore previous token if test failed
+            if (previousToken) {
+                localStorage.setItem('githubToken', previousToken);
+            } else {
+                localStorage.removeItem('githubToken');
+            }
+            showErrorMessage('GitHub token geçersiz! Lütfen token izinlerini kontrol edin.');
             updateGitHubStatus(false);
         }
     } catch (error) {
-        localStorage.removeItem('githubToken');
+        // Restore previous token if test failed
+        if (previousToken) {
+            localStorage.setItem('githubToken', previousToken);
+        } else {
+            localStorage.removeItem('githubToken');
+        }
         showErrorMessage('GitHub bağlantısı test edilemedi: ' + error.message);
         updateGitHubStatus(false);
     }
@@ -1294,17 +1379,60 @@ function clearGitHubToken() {
     const tokenInput = document.getElementById('githubToken');
     if (tokenInput) {
         tokenInput.value = '';
+        tokenInput.removeAttribute('data-original');
+        tokenInput.type = 'password'; // Reset to password type
     }
     updateGitHubStatus(false);
     showSuccessMessage('GitHub token temizlendi!');
+}
+
+function maskTokenInput(token) {
+    const tokenInput = document.getElementById('githubToken');
+    if (tokenInput && token) {
+        // Store the original token in data-original attribute
+        tokenInput.setAttribute('data-original', token);
+        // Display masked version
+        tokenInput.value = token.substring(0, 8) + '...' + token.substring(token.length - 4);
+        tokenInput.type = 'text'; // Change to text to show the masked value properly
+    }
+}
+
+function toggleTokenVisibility() {
+    const tokenInput = document.getElementById('githubToken');
+    const toggleBtn = document.querySelector('.token-toggle-btn i');
+    
+    if (tokenInput && toggleBtn) {
+        const originalToken = tokenInput.getAttribute('data-original');
+        
+        if (tokenInput.type === 'password') {
+            // Show token (if it exists)
+            if (originalToken) {
+                tokenInput.type = 'text';
+                tokenInput.value = originalToken;
+            } else {
+                tokenInput.type = 'text';
+            }
+            toggleBtn.className = 'fas fa-eye-slash';
+        } else {
+            // Hide token
+            if (originalToken && tokenInput.value === originalToken) {
+                // Mask the token again
+                maskTokenInput(originalToken);
+                toggleBtn.className = 'fas fa-eye';
+            } else {
+                // User might have entered a new token, just hide it
+                tokenInput.type = 'password';
+                toggleBtn.className = 'fas fa-eye';
+            }
+        }
+    }
 }
 
 function loadGitHubToken() {
     const token = localStorage.getItem('githubToken');
     const tokenInput = document.getElementById('githubToken');
     if (token && tokenInput) {
-        // Show masked token for security
-        tokenInput.value = token.substring(0, 8) + '...' + token.substring(token.length - 4);
-        tokenInput.setAttribute('data-original', token);
+        // Use the new masking function
+        maskTokenInput(token);
     }
 }

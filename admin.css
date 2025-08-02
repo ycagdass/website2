@@ -797,6 +797,41 @@ body {
     color: var(--text-dark);
 }
 
+.token-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.token-input-wrapper .form-input {
+    flex: 1;
+    padding-right: 50px; /* Make room for the toggle button */
+}
+
+.token-toggle-btn {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    transition: var(--transition);
+    font-size: 14px;
+    z-index: 1;
+}
+
+.token-toggle-btn:hover {
+    color: var(--primary-color);
+    background: rgba(139, 38, 53, 0.1);
+}
+
+.token-toggle-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(139, 38, 53, 0.2);
+}
+
 .form-help {
     color: #6c757d;
     font-size: 12px;
