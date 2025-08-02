@@ -18,7 +18,7 @@ const GitHubAPI = {
     // Get the current data.json file from GitHub
     async getDataFile() {
         try {
-            const token = localStorage.getItem('github_token');
+            const token = localStorage.getItem('githubToken');
             if (!token) {
                 throw new Error('GitHub token not found');
             }
@@ -48,7 +48,7 @@ const GitHubAPI = {
     // Update data.json file on GitHub
     async updateDataFile(newData, commitMessage = 'Update content from admin panel') {
         try {
-            const token = localStorage.getItem('github_token');
+            const token = localStorage.getItem('githubToken');
             if (!token) {
                 throw new Error('GitHub token not found');
             }
@@ -104,7 +104,7 @@ const GitHubAPI = {
     // Test GitHub connection
     async testConnection() {
         try {
-            const token = localStorage.getItem('github_token');
+            const token = localStorage.getItem('githubToken');
             if (!token) {
                 return false;
             }
@@ -364,7 +364,7 @@ async function saveContent(sectionId) {
         localStorage.setItem(`content_${sectionId}`, JSON.stringify(data));
         
         // Try to save to GitHub
-        if (localStorage.getItem('github_token')) {
+        if (localStorage.getItem('githubToken')) {
             try {
                 await GitHubAPI.retryOperation(async () => {
                     return await GitHubAPI.updateDataFile(
@@ -616,7 +616,7 @@ async function uploadImages() {
         localStorage.setItem('gallery_images', JSON.stringify(existingImages));
         
         // Try to save to GitHub
-        if (localStorage.getItem('github_token')) {
+        if (localStorage.getItem('githubToken')) {
             try {
                 await GitHubAPI.updateDataFile(
                     { gallery: existingImages },
@@ -942,7 +942,7 @@ async function saveContactInfo() {
         localStorage.setItem('contactInfo', JSON.stringify(contactData));
         
         // Try to save to GitHub
-        if (localStorage.getItem('github_token')) {
+        if (localStorage.getItem('githubToken')) {
             try {
                 await GitHubAPI.updateDataFile(
                     { contactInfo: contactData },
@@ -1148,7 +1148,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // GitHub Settings Management
 function initGitHubSettings() {
     // Check if GitHub token exists and test connection
-    const token = localStorage.getItem('github_token');
+    const token = localStorage.getItem('githubToken');
     if (token) {
         testGitHubConnection();
         
@@ -1161,7 +1161,7 @@ function initGitHubSettings() {
 function startGitHubHeartbeat() {
     // Check every 60 seconds
     setInterval(async () => {
-        if (localStorage.getItem('github_token')) {
+        if (localStorage.getItem('githubToken')) {
             const isConnected = await testGitHubConnection();
             updateGitHubStatus(isConnected);
         }
@@ -1176,7 +1176,7 @@ function toggleGitHubSettings() {
 }
 
 async function saveGitHubToken() {
-    const tokenInput = document.getElementById('github-token');
+    const tokenInput = document.getElementById('githubToken');
     const token = tokenInput ? tokenInput.value.trim() : '';
     
     if (!token) {
@@ -1187,7 +1187,7 @@ async function saveGitHubToken() {
     // Test the token
     showLoadingMessage('GitHub bağlantısı test ediliyor...');
     
-    localStorage.setItem('github_token', token);
+    localStorage.setItem('githubToken', token);
     
     try {
         const isValid = await GitHubAPI.testConnection();
@@ -1199,12 +1199,12 @@ async function saveGitHubToken() {
             // Try to sync current data
             await syncToGitHub();
         } else {
-            localStorage.removeItem('github_token');
+            localStorage.removeItem('githubToken');
             showErrorMessage('GitHub token geçersiz! Lütfen kontrol edin.');
             updateGitHubStatus(false);
         }
     } catch (error) {
-        localStorage.removeItem('github_token');
+        localStorage.removeItem('githubToken');
         showErrorMessage('GitHub bağlantısı test edilemedi: ' + error.message);
         updateGitHubStatus(false);
     }
@@ -1235,7 +1235,7 @@ function updateGitHubStatus(isConnected) {
 }
 
 async function syncToGitHub() {
-    if (!localStorage.getItem('github_token')) {
+    if (!localStorage.getItem('githubToken')) {
         showErrorMessage('GitHub token bulunamadı!');
         return;
     }
@@ -1290,8 +1290,8 @@ async function syncToGitHub() {
 }
 
 function clearGitHubToken() {
-    localStorage.removeItem('github_token');
-    const tokenInput = document.getElementById('github-token');
+    localStorage.removeItem('githubToken');
+    const tokenInput = document.getElementById('githubToken');
     if (tokenInput) {
         tokenInput.value = '';
     }
@@ -1300,8 +1300,8 @@ function clearGitHubToken() {
 }
 
 function loadGitHubToken() {
-    const token = localStorage.getItem('github_token');
-    const tokenInput = document.getElementById('github-token');
+    const token = localStorage.getItem('githubToken');
+    const tokenInput = document.getElementById('githubToken');
     if (token && tokenInput) {
         // Show masked token for security
         tokenInput.value = token.substring(0, 8) + '...' + token.substring(token.length - 4);
