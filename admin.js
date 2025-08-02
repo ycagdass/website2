@@ -1155,6 +1155,15 @@ function initGitHubSettings() {
         // Start heartbeat monitoring
         startGitHubHeartbeat();
     }
+    
+    // Add event listener to clear data-original when user types new token
+    const tokenInput = document.getElementById('githubToken');
+    if (tokenInput) {
+        tokenInput.addEventListener('input', function() {
+            // Clear the data-original attribute when user starts typing
+            this.removeAttribute('data-original');
+        });
+    }
 }
 
 // Start monitoring GitHub connectivity
@@ -1177,7 +1186,8 @@ function toggleGitHubSettings() {
 
 async function saveGitHubToken() {
     const tokenInput = document.getElementById('githubToken');
-    const token = tokenInput ? tokenInput.value.trim() : '';
+    // Use original token from data attribute if available, otherwise use input value
+    const token = tokenInput ? (tokenInput.getAttribute('data-original') || tokenInput.value.trim()) : '';
     
     if (!token) {
         showErrorMessage('Lütfen geçerli bir GitHub token girin!');
