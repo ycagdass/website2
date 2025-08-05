@@ -4,49 +4,336 @@ function toggleMobileMenu() {
     nav.classList.toggle('active');
 }
 
-// Load content from GitHub or data.json - Optimized for cPanel hosting
+// ==========================================
+// DYNAMIC INLINE EDITING SYSTEM
+// ==========================================
+
+// Editing state management
+const editingState = {
+    isEditing: false,
+    currentElement: null,
+    originalContent: '',
+    editingMode: false
+};
+
+// Initialize inline editing system
+function initializeInlineEditing() {
+    // Add editing controls to the page
+    createEditingInterface();
+    
+    // Make content areas editable
+    setupEditableAreas();
+    
+    // Load saved content
+    loadSavedContent();
+    
+    // Set up auto-save
+    setupAutoSave();
+    
+    console.log('✅ Dynamic inline editing system initialized');
+}
+
+// Create editing interface
+function createEditingInterface() {
+    // Create editing toggle button
+    const editToggle = document.createElement('button');
+    editToggle.id = 'edit-toggle-btn';
+    editToggle.className = 'edit-toggle-btn';
+    editToggle.innerHTML = `
+        <i class="fas fa-edit"></i>
+        <span>Düzenleme Modu</span>
+    `;
+    editToggle.onclick = toggleEditingMode;
+    
+    // Create editing toolbar
+    const toolbar = document.createElement('div');
+    toolbar.id = 'editing-toolbar';
+    toolbar.className = 'editing-toolbar hidden';
+    toolbar.innerHTML = `
+        <div class="toolbar-content">
+            <button onclick="saveAllContent()" class="toolbar-btn save-btn">
+                <i class="fas fa-save"></i> Tümünü Kaydet
+            </button>
+            <button onclick="exitEditingMode()" class="toolbar-btn cancel-btn">
+                <i class="fas fa-times"></i> Çıkış
+            </button>
+            <div class="toolbar-status">
+                <span id="save-status">Otomatik kaydetme aktif</span>
+            </div>
+        </div>
+    `;
+    
+    // Add to page
+    document.body.appendChild(editToggle);
+    document.body.appendChild(toolbar);
+}
+
+// Setup editable areas
+function setupEditableAreas() {
+    const editableSelectors = [
+        '#hakkimizda-content',
+        '#yorumlar-content', 
+        '#fiyatlistesi-content',
+        '.hero-subtitle',
+        '#iletisim-content .contact-item:nth-child(4) p' // Service area
+    ];
+    
+    editableSelectors.forEach(selector => {
+        const element = document.querySelector(selector);
+        if (element) {
+            makeElementEditable(element);
+        }
+    });
+}
+
+// Make individual element editable
+function makeElementEditable(element) {
+    // Add editable attributes and classes
+    element.setAttribute('data-editable', 'true');
+    element.addEventListener('click', handleEditableClick);
+    element.addEventListener('blur', handleEditableBlur);
+    element.addEventListener('input', handleEditableInput);
+    
+    // Add visual indicator when editing mode is active
+    element.classList.add('editable-area');
+}
+
+// Handle click on editable elements
+function handleEditableClick(event) {
+    if (!editingState.editingMode) return;
+    
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const element = event.target;
+    startEditing(element);
+}
+
+// Handle blur (when element loses focus)
+function handleEditableBlur(event) {
+    if (!editingState.editingMode) return;
+    
+    const element = event.target;
+    saveElementContent(element);
+}
+
+// Handle input changes
+function handleEditableInput(event) {
+    if (!editingState.editingMode) return;
+    
+    const element = event.target;
+    // Auto-save after 2 seconds of no typing
+    clearTimeout(element.saveTimeout);
+    element.saveTimeout = setTimeout(() => {
+        saveElementContent(element);
+        showSaveStatus('Otomatik kaydedildi', 'success');
+    }, 2000);
+}
+
+// Start editing an element
+function startEditing(element) {
+    if (editingState.currentElement) {
+        finishEditing(editingState.currentElement);
+    }
+    
+    editingState.currentElement = element;
+    editingState.originalContent = element.innerHTML;
+    
+    element.contentEditable = true;
+    element.classList.add('editing-active');
+    element.focus();
+    
+    // Select all text
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+}
+
+// Finish editing an element
+function finishEditing(element) {
+    if (!element) return;
+    
+    element.contentEditable = false;
+    element.classList.remove('editing-active');
+    saveElementContent(element);
+    
+    editingState.currentElement = null;
+    editingState.originalContent = '';
+}
+
+// Toggle editing mode
+function toggleEditingMode() {
+    editingState.editingMode = !editingState.editingMode;
+    
+    const toolbar = document.getElementById('editing-toolbar');
+    const toggleBtn = document.getElementById('edit-toggle-btn');
+    
+    if (editingState.editingMode) {
+        // Enter editing mode
+        toolbar.classList.remove('hidden');
+        toggleBtn.classList.add('active');
+        document.body.classList.add('editing-mode');
+        
+        // Add visual indicators to editable areas
+        document.querySelectorAll('[data-editable="true"]').forEach(el => {
+            el.classList.add('editable-highlighted');
+        });
+        
+        showSaveStatus('Düzenleme modu aktif - İçeriklere tıklayarak düzenleyin', 'info');
+    } else {
+        exitEditingMode();
+    }
+}
+
+// Exit editing mode
+function exitEditingMode() {
+    // Finish any active editing
+    if (editingState.currentElement) {
+        finishEditing(editingState.currentElement);
+    }
+    
+    editingState.editingMode = false;
+    
+    const toolbar = document.getElementById('editing-toolbar');
+    const toggleBtn = document.getElementById('edit-toggle-btn');
+    
+    toolbar.classList.add('hidden');
+    toggleBtn.classList.remove('active');
+    document.body.classList.remove('editing-mode');
+    
+    // Remove visual indicators
+    document.querySelectorAll('[data-editable="true"]').forEach(el => {
+        el.classList.remove('editable-highlighted', 'editing-active');
+        el.contentEditable = false;
+    });
+    
+    showSaveStatus('Düzenleme modu kapatıldı', 'success');
+}
+
+// Save element content to localStorage
+function saveElementContent(element) {
+    const content = element.innerHTML.trim();
+    const elementId = getElementIdentifier(element);
+    
+    if (elementId && content !== editingState.originalContent) {
+        localStorage.setItem(`dynamic_content_${elementId}`, content);
+        localStorage.setItem(`dynamic_content_${elementId}_timestamp`, new Date().toISOString());
+        
+        console.log(`💾 Saved content for ${elementId}`);
+    }
+}
+
+// Get unique identifier for element
+function getElementIdentifier(element) {
+    if (element.id) return element.id;
+    
+    // Generate identifier based on element's position and content
+    const parent = element.closest('section');
+    if (parent && parent.id) {
+        const index = Array.from(parent.querySelectorAll('[data-editable="true"]')).indexOf(element);
+        return `${parent.id}_content_${index}`;
+    }
+    
+    return null;
+}
+
+// Save all content
+function saveAllContent() {
+    document.querySelectorAll('[data-editable="true"]').forEach(element => {
+        saveElementContent(element);
+    });
+    
+    showSaveStatus('Tüm içerik kaydedildi', 'success');
+}
+
+// Load saved content
+function loadSavedContent() {
+    document.querySelectorAll('[data-editable="true"]').forEach(element => {
+        const elementId = getElementIdentifier(element);
+        if (elementId) {
+            const savedContent = localStorage.getItem(`dynamic_content_${elementId}`);
+            if (savedContent) {
+                element.innerHTML = savedContent;
+            }
+        }
+    });
+    
+    // Also load contact info and other dynamic content
+    loadContactInfo();
+    loadGalleryImages();
+}
+
+// Show save status
+function showSaveStatus(message, type = 'info') {
+    const statusElement = document.getElementById('save-status');
+    if (statusElement) {
+        statusElement.textContent = message;
+        statusElement.className = `status-${type}`;
+        
+        // Clear status after 3 seconds
+        setTimeout(() => {
+            if (editingState.editingMode) {
+                statusElement.textContent = 'Otomatik kaydetme aktif';
+                statusElement.className = '';
+            }
+        }, 3000);
+    }
+}
+
+// Setup auto-save
+function setupAutoSave() {
+    // Save content every 30 seconds
+    setInterval(() => {
+        if (editingState.editingMode) {
+            saveAllContent();
+        }
+    }, 30000);
+}
+// ==========================================
+// CONTENT MANAGEMENT SYSTEM
+// ==========================================
+
+// Load content with fallback system
 async function loadContent() {
     try {
-        // Priority 1: Load from admin panel (localStorage) for immediate response
-        const hasAdminData = loadFromLocalStorage();
+        // Load from localStorage first (dynamic content)
+        loadSavedContent();
         
-        // Priority 2: Load contact info from admin panel
+        // Load contact information
         loadContactInfo();
         
-        // Priority 3: Try to load from GitHub for updates (background process)
+        // Load gallery images
+        loadGalleryImages();
+        
+        // Try to load from JSON file as fallback for static content
         try {
-            const githubData = await loadFromGitHub();
-            if (githubData) {
-                updateContent(githubData);
-                cacheDataLocally(githubData);
-                showNetworkStatus('github');
-                return;
+            const response = await fetch(`./data.json?t=${Date.now()}`);
+            if (response.ok) {
+                const data = await response.json();
+                updateStaticContent(data);
+                showNetworkStatus('local');
             }
         } catch (error) {
-            console.log('GitHub sync in background failed:', error);
+            console.log('JSON file not found, using defaults');
+            showNetworkStatus('offline');
         }
         
-        // Priority 4: Try to load from JSON file (cPanel local fallback)
-        if (!hasAdminData) {
-            try {
-                // Use relative path for cPanel hosting
-                const response = await fetch(`./data.json?t=${Date.now()}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    updateContent(data);
-                    showNetworkStatus('local');
-                }
-            } catch (error) {
-                console.log('Local JSON file not found, using defaults');
-                showNetworkStatus('offline');
-            }
-        } else {
-            showNetworkStatus('local');
-        }
     } catch (error) {
-        console.log('Loading from localStorage due to:', error);
-        loadFromLocalStorage();
+        console.log('Loading content from localStorage');
         showNetworkStatus('offline');
+    }
+}
+
+// Update static content (for non-editable areas)
+function updateStaticContent(data) {
+    // Update services section (static content)
+    if (data.hizmetler && typeof data.hizmetler === 'string' && data.hizmetler.includes('<div class="service-card">')) {
+        const servicesElement = document.getElementById('hizmetler-content');
+        if (servicesElement && !servicesElement.hasAttribute('data-editable')) {
+            servicesElement.innerHTML = data.hizmetler;
+        }
     }
 }
 
@@ -58,7 +345,7 @@ function showNetworkStatus(mode) {
         indicator.id = 'networkStatusIndicator';
         indicator.style.cssText = `
             position: fixed;
-            bottom: 20px;
+            bottom: 80px;
             right: 20px;
             padding: 8px 12px;
             border-radius: 20px;
@@ -80,17 +367,11 @@ function showNetworkStatus(mode) {
     }
     
     switch (mode) {
-        case 'github':
-            indicator.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
-            indicator.style.color = 'white';
-            indicator.textContent = '🌐 GitHub Sync';
-            indicator.title = 'İçerik GitHub\'dan yüklendi';
-            break;
         case 'local':
             indicator.style.background = 'linear-gradient(135deg, #ffc107, #fd7e14)';
             indicator.style.color = 'white';
-            indicator.textContent = '💾 Yerel Cache';
-            indicator.title = 'İçerik yerel cache\'den yüklendi';
+            indicator.textContent = '💾 Dinamik İçerik';
+            indicator.title = 'İçerik dinamik olarak yüklendi';
             break;
         case 'offline':
             indicator.style.background = 'linear-gradient(135deg, #6c757d, #495057)';
@@ -101,205 +382,70 @@ function showNetworkStatus(mode) {
     }
 }
 
-// Load content from GitHub - Enhanced for cPanel hosting with GitHub integration
-async function loadFromGitHub() {
-    try {
-        // Check cache first to avoid unnecessary requests
-        const cachedData = getCachedGitHubData();
-        const cacheAge = Date.now() - parseInt(localStorage.getItem('github_cache_timestamp') || '0');
-        
-        // Use cache if it's less than 30 seconds old (optimized for cPanel hosting)
-        if (cachedData && cacheAge < 30000) {
-            console.log('Using recent GitHub cache for cPanel hosting');
-            return cachedData;
-        }
-        
-        // GitHub raw content URL with cache-busting
-        const timestamp = Date.now();
-        const githubUrl = `https://raw.githubusercontent.com/ycagdass/website2/main/data.json?t=${timestamp}`;
-        
-        const fetchOptions = {
-            method: 'GET',
-            headers: {
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache',
-                'Expires': '0'
-            }
-        };
-        
-        // Add timeout if AbortSignal is supported (modern browsers)
-        if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) {
-            fetchOptions.signal = AbortSignal.timeout(10000); // 10 second timeout
-        }
-        
-        const response = await fetch(githubUrl, fetchOptions);
-        
-        if (response.ok) {
-            const data = await response.json();
-            console.log('Content loaded from GitHub for cPanel hosting');
-            
-            // Check if data has metadata and is newer than cached data
-            if (data._metadata) {
-                const newTimestamp = new Date(data._metadata.lastUpdated);
-                const cachedTimestamp = cachedData && cachedData._metadata ? 
-                    new Date(cachedData._metadata.lastUpdated) : 
-                    new Date(0);
-                
-                if (newTimestamp <= cachedTimestamp) {
-                    console.log('Cached data is newer, using cache for cPanel');
-                    return cachedData;
-                }
-                
-                console.log(`Loading updated content from GitHub for cPanel (version: ${data._metadata.version})`);
-            }
-            
-            return data;
-        } else {
-            console.log('GitHub response not OK for cPanel hosting:', response.status);
-        }
-    } catch (error) {
-        console.log('GitHub fetch failed for cPanel hosting:', error);
-        
-        // Return cached data as fallback for cPanel hosting
-        const cachedData = getCachedGitHubData();
-        if (cachedData) {
-            console.log('Using cached GitHub data as fallback for cPanel');
-            return cachedData;
-        }
-    }
-    return null;
-}
-
-// Get cached GitHub data
-function getCachedGitHubData() {
-    try {
-        const cached = localStorage.getItem('github_cache');
-        return cached ? JSON.parse(cached) : null;
-    } catch (error) {
-        console.error('Error reading GitHub cache:', error);
-        return null;
-    }
-}
-
-// Cache data locally for offline access
-function cacheDataLocally(data) {
-    try {
-        // Cache the entire data object
-        localStorage.setItem('github_cache', JSON.stringify(data));
-        localStorage.setItem('github_cache_timestamp', Date.now().toString());
-        
-        // Also cache individual sections for compatibility
-        Object.keys(data).forEach(key => {
-            if (typeof data[key] === 'string') {
-                const sectionData = {
-                    section: key,
-                    content: data[key],
-                    timestamp: new Date().toISOString(),
-                    fromGitHub: true
-                };
-                localStorage.setItem(`content_${key}`, JSON.stringify(sectionData));
-            }
-        });
-        
-        // Cache contact info separately if it exists
-        if (data.contactInfo) {
-            localStorage.setItem('contactInfo', JSON.stringify(data.contactInfo));
-        }
-        
-        // Cache gallery if it exists
-        if (data.gallery && Array.isArray(data.gallery)) {
-            localStorage.setItem('gallery_images', JSON.stringify(data.gallery));
-        }
-        
-    } catch (error) {
-        console.error('Error caching data locally:', error);
-    }
-}
-
-// Update content on page
-function updateContent(data) {
-    // Ana sayfa içeriği
-    if (data.anasayfa) {
-        const element = document.getElementById('anasayfa-content');
-        if (element) element.innerHTML = data.anasayfa;
-    }
-    
-    // Hakkımızda içeriği
-    if (data.hakkimizda) {
-        const element = document.getElementById('hakkimizda-content');
-        if (element) element.innerHTML = data.hakkimizda;
-    }
-    
-    // Hizmetler içeriği
-    if (data.hizmetler) {
-        const element = document.getElementById('hizmetler-content');
-        if (element) element.innerHTML = data.hizmetler;
-    }
-    
-    // Yorumlar içeriği
-    if (data.yorumlar) {
-        const element = document.getElementById('yorumlar-content');
-        if (element) element.innerHTML = data.yorumlar;
-    }
-    
-    // İletişim içeriği - Admin panelinden kontrol et
-    const adminContactInfo = localStorage.getItem('contactInfo');
-    if (adminContactInfo) {
-        // Admin panelinden gelen iletişim bilgilerini kullan
-        loadContactInfo();
-    } else if (data.iletisim) {
-        // Yoksa JSON'dan yükle
-        const element = document.getElementById('iletisim-content');
-        if (element) element.innerHTML = data.iletisim;
-    }
-    
-    // Fiyat listesi içeriği
-    if (data.fiyatlistesi) {
-        const element = document.getElementById('fiyatlistesi-content');
-        if (element) element.innerHTML = data.fiyatlistesi;
-    }
-    
-    // Galeri görsellerini yükle
-    if (data.gallery && Array.isArray(data.gallery)) {
-        const gallery = document.getElementById('gallery-images');
-        if (gallery) {
-            gallery.innerHTML = data.gallery.map(img => 
-                `<img src="${img}" alt="Canpolat Halı Yıkama Galeri" loading="lazy" onclick="openLightbox('${img}')">`
-            ).join('');
+// Load contact information
+function loadContactInfo() {
+    const contactInfo = localStorage.getItem('contactInfo');
+    if (contactInfo) {
+        try {
+            const data = JSON.parse(contactInfo);
+            updateContactDisplay(data);
+        } catch (error) {
+            console.error('Error loading contact info:', error);
         }
     }
 }
 
-// Load from localStorage
-function loadFromLocalStorage() {
-    const sections = ['anasayfa', 'hakkimizda', 'hizmetler', 'yorumlar', 'iletisim', 'fiyatlistesi'];
-    let hasData = false;
+// Update contact display
+function updateContactDisplay(data) {
+    // Update header phone
+    const headerPhone = document.querySelector('.header-contact .phone-btn');
+    if (headerPhone && data.phone2) {
+        headerPhone.href = `tel:${data.phone2.replace(/\s/g, '')}`;
+        headerPhone.querySelector('span').textContent = data.phone2;
+    }
     
-    sections.forEach(sectionId => {
-        const savedData = localStorage.getItem(`content_${sectionId}`);
-        if (savedData) {
-            try {
-                const data = JSON.parse(savedData);
-                const element = document.getElementById(sectionId + '-content');
-                if (element && data.content) {
-                    // For services section, check if it's custom HTML or default
-                    if (sectionId === 'hizmetler' && data.content.includes('<div class="service-card">')) {
-                        element.innerHTML = data.content;
-                    } else if (sectionId === 'hizmetler') {
-                        // If it's not custom HTML, keep the default service cards
-                        console.log('Using default service cards');
-                    } else {
-                        element.innerHTML = data.content;
-                    }
-                    hasData = true;
-                }
-            } catch (e) {
-                console.error('Error loading content for', sectionId, e);
-            }
-        }
-    });
+    // Update hero section
+    const heroSubtitle = document.querySelector('.hero-subtitle');
+    if (heroSubtitle && data.phone1 && data.phone2) {
+        heroSubtitle.textContent = `7/24 ${data.phone2} & ${data.phone1} hizmetinizde! Profesyonel halı ve koltuk yıkama hizmeti.`;
+    }
     
-    // Load gallery from localStorage
+    // Update hero buttons
+    const heroButtons = document.querySelector('.hero-buttons');
+    if (heroButtons && data.phone1 && data.phone2) {
+        heroButtons.innerHTML = `
+            <a href="tel:${data.phone2.replace(/\s/g, '')}" class="btn btn-primary">
+                <i class="fas fa-phone"></i> GSM Ara
+            </a>
+            <a href="tel:${data.phone1.replace(/\s/g, '')}" class="btn btn-primary">
+                <i class="fas fa-phone"></i> Sabit Hat
+            </a>
+            <a href="#hizmetler" class="btn btn-secondary">
+                <i class="fas fa-arrow-down"></i> Hizmetlerimiz
+            </a>
+        `;
+    }
+    
+    // Update footer
+    const footerContact = document.querySelector('.footer-contact');
+    if (footerContact && data.phone1 && data.phone2) {
+        footerContact.innerHTML = `
+            <h4>İletişim</h4>
+            <p><i class="fas fa-phone"></i> ${data.phone1}</p>
+            <p><i class="fas fa-mobile-alt"></i> ${data.phone2}</p>
+            <p><i class="fas fa-clock"></i> ${data.workingHours || '7/24 Hizmet'}</p>
+        `;
+    }
+    
+    // Update WhatsApp button
+    const whatsappBtn = document.querySelector('.whatsapp-btn');
+    if (whatsappBtn && data.whatsapp) {
+        whatsappBtn.href = `https://wa.me/${data.whatsapp.replace(/\s/g, '')}`;
+    }
+}
+
+// Load gallery images
+function loadGalleryImages() {
     const galleryData = localStorage.getItem('gallery_images');
     if (galleryData) {
         try {
@@ -309,15 +455,16 @@ function loadFromLocalStorage() {
                 gallery.innerHTML = images.map(img => 
                     `<img src="${img}" alt="Canpolat Halı Yıkama Galeri" loading="lazy" onclick="openLightbox('${img}')">`
                 ).join('');
-                hasData = true;
             }
         } catch (e) {
             console.error('Error loading gallery:', e);
         }
     }
-    
-    return hasData;
 }
+
+// ==========================================
+// UTILITY FUNCTIONS
+// ==========================================
 
 // Lightbox functionality
 function openLightbox(imageSrc) {
@@ -355,6 +502,10 @@ function closeLightbox() {
         document.body.style.overflow = 'auto';
     }
 }
+
+// ==========================================
+// PAGE INTERACTION HANDLERS
+// ==========================================
 
 // Smooth scrolling for navigation links
 document.addEventListener('DOMContentLoaded', function() {
@@ -447,270 +598,38 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Load content when page loads
+// ==========================================
+// INITIALIZATION
+// ==========================================
+
+// Initialize everything when page loads
 window.addEventListener('load', function() {
+    // Load content first
     loadContent();
-    loadContactInfo();
-});
-
-// Load contact information from admin panel
-function loadContactInfo() {
-    const contactInfo = localStorage.getItem('contactInfo');
-    if (contactInfo) {
-        try {
-            const data = JSON.parse(contactInfo);
-            
-            // Update header phone
-            const headerPhone = document.querySelector('.header-contact .phone-btn');
-            if (headerPhone && data.phone2) {
-                headerPhone.href = `tel:${data.phone2.replace(/\s/g, '')}`;
-                headerPhone.querySelector('span').textContent = data.phone2;
-            }
-            
-            // Update hero section
-            const heroSubtitle = document.getElementById('anasayfa-content');
-            if (heroSubtitle && data.phone1 && data.phone2) {
-                heroSubtitle.textContent = `7/24 ${data.phone2} & ${data.phone1} hizmetinizde! Profesyonel halı ve koltuk yıkama hizmeti.`;
-            }
-            
-            // Update hero buttons
-            const heroButtons = document.querySelector('.hero-buttons');
-            if (heroButtons && data.phone1 && data.phone2) {
-                heroButtons.innerHTML = `
-                    <a href="tel:${data.phone2.replace(/\s/g, '')}" class="btn btn-primary">
-                        <i class="fas fa-phone"></i> GSM Ara
-                    </a>
-                    <a href="tel:${data.phone1.replace(/\s/g, '')}" class="btn btn-primary">
-                        <i class="fas fa-phone"></i> Sabit Hat
-                    </a>
-                    <a href="#hizmetler" class="btn btn-secondary">
-                        <i class="fas fa-arrow-down"></i> Hizmetlerimiz
-                    </a>
-                `;
-            }
-            
-            // Update contact section
-            const contactSection = document.getElementById('iletisim-content');
-            if (contactSection) {
-                let contactHTML = '';
-                
-                if (data.phone1) {
-                    contactHTML += `
-                        <div class="contact-item">
-                            <i class="fas fa-phone"></i>
-                            <div>
-                                <h4>Ana Telefon</h4>
-                                <p>${data.phone1}</p>
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                if (data.phone2) {
-                    contactHTML += `
-                        <div class="contact-item">
-                            <i class="fas fa-mobile-alt"></i>
-                            <div>
-                                <h4>GSM</h4>
-                                <p>${data.phone2}</p>
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                if (data.workingHours) {
-                    contactHTML += `
-                        <div class="contact-item">
-                            <i class="fas fa-clock"></i>
-                            <div>
-                                <h4>Çalışma Saatleri</h4>
-                                <p>${data.workingHours}</p>
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                if (data.serviceArea) {
-                    contactHTML += `
-                        <div class="contact-item">
-                            <i class="fas fa-map-marker-alt"></i>
-                            <div>
-                                <h4>Hizmet Alanı</h4>
-                                <p>${data.serviceArea}</p>
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                if (data.address) {
-                    contactHTML += `
-                        <div class="contact-item">
-                            <i class="fas fa-home"></i>
-                            <div>
-                                <h4>Adres</h4>
-                                <p>${data.address}</p>
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                contactSection.innerHTML = contactHTML;
-            }
-            
-            // Update footer
-            const footerContact = document.querySelector('.footer-contact');
-            if (footerContact && data.phone1 && data.phone2) {
-                footerContact.innerHTML = `
-                    <h4>İletişim</h4>
-                    <p><i class="fas fa-phone"></i> ${data.phone1}</p>
-                    <p><i class="fas fa-mobile-alt"></i> ${data.phone2}</p>
-                    <p><i class="fas fa-clock"></i> ${data.workingHours || '7/24 Hizmet'}</p>
-                `;
-            }
-            
-            // Update WhatsApp button
-            const whatsappBtn = document.querySelector('.whatsapp-btn');
-            if (whatsappBtn && data.whatsapp) {
-                whatsappBtn.href = `https://wa.me/${data.whatsapp.replace(/\s/g, '')}`;
-            }
-            
-        } catch (error) {
-            console.error('Error loading contact info:', error);
-        }
-    }
-}
-
-// Auto-refresh content every 5 seconds for real-time updates
-let refreshInterval;
-
-function startAutoRefresh() {
-    if (refreshInterval) {
-        clearInterval(refreshInterval);
-    }
     
-    refreshInterval = setInterval(async () => {
-        // Try to load from GitHub first
-        try {
-            const githubData = await loadFromGitHub();
-            if (githubData) {
-                updateContent(githubData);
-                cacheDataLocally(githubData);
-                return;
-            }
-        } catch (error) {
-            console.log('GitHub auto-refresh failed, using localStorage');
-        }
-        
-        // Fallback to localStorage
-        loadContent();
-        loadContactInfo();
-        
-        // Check for gallery updates
-        const galleryData = localStorage.getItem('gallery_images');
-        if (galleryData) {
-            try {
-                const images = JSON.parse(galleryData);
-                const gallery = document.getElementById('gallery-images');
-                if (gallery && images.length > 0) {
-                    gallery.innerHTML = images.map(img => 
-                        `<img src="${img}" alt="Canpolat Halı Yıkama Galeri" loading="lazy" onclick="openLightbox('${img}')">`
-                    ).join('');
-                }
-            } catch (e) {
-                console.error('Error loading gallery:', e);
-            }
-        }
-    }, 5000);
-}
-
-// Start auto-refresh on page load
-startAutoRefresh();
-
-// Listen for localStorage changes (for real-time updates)
-window.addEventListener('storage', function(e) {
-    if (e.key && (e.key.startsWith('content_') || e.key === 'contactInfo' || e.key === 'gallery_images')) {
-        // Reload content when admin panel updates
-        setTimeout(() => {
-            loadContent();
-            loadContactInfo();
-        }, 100);
-    }
+    // Initialize inline editing system
+    initializeInlineEditing();
+    
+    console.log('🚀 Dynamic website system initialized');
 });
 
-// Listen for BroadcastChannel messages (cross-tab communication)
-if (typeof BroadcastChannel !== 'undefined') {
-    const channel = new BroadcastChannel('admin-updates');
-    channel.addEventListener('message', function(e) {
-        console.log('Received broadcast message:', e.data);
-        
-        if (e.data.type === 'content-update') {
-            // Update specific section
-            setTimeout(() => {
-                loadContent();
-            }, 100);
-        } else if (e.data.type === 'contact-update') {
-            // Update contact information
-            setTimeout(() => {
-                loadContactInfo();
-            }, 100);
-        } else if (e.data.type === 'gallery-update') {
-            // Update gallery
-            setTimeout(() => {
-                loadContent();
-            }, 100);
-        } else if (e.data.type === 'github-sync') {
-            // GitHub sync completed, reload from GitHub immediately
-            setTimeout(async () => {
-                console.log('GitHub sync detected, reloading content...');
-                try {
-                    const githubData = await loadFromGitHub();
-                    if (githubData) {
-                        updateContent(githubData);
-                        cacheDataLocally(githubData);
-                        showNetworkStatus('github');
-                        console.log('Content updated from GitHub sync');
-                    }
-                } catch (error) {
-                    console.log('Failed to load updated content from GitHub:', error);
-                    loadContent();
-                    loadContactInfo();
-                }
-            }, 500); // Small delay to ensure GitHub has processed the update
-        }
-    });
-}
-
-// Force update when window gets focus (user switches back to main site)
+// Handle page focus (when user returns to tab)
 window.addEventListener('focus', function() {
     loadContent();
-    loadContactInfo();
 });
 
 // Handle visibility change for better mobile support
 document.addEventListener('visibilitychange', function() {
     if (!document.hidden) {
-        // Page became visible, refresh content
         loadContent();
-        loadContactInfo();
     }
 });
 
-// WhatsApp button click tracking
-document.addEventListener('DOMContentLoaded', function() {
-    const whatsappBtn = document.querySelector('.whatsapp-btn');
-    if (whatsappBtn) {
-        whatsappBtn.addEventListener('click', function() {
-            console.log('WhatsApp button clicked');
-        });
-    }
-});
-
-// Service phone call tracking
-document.addEventListener('DOMContentLoaded', function() {
-    const phoneButtons = document.querySelectorAll('a[href^="tel:"]');
-    phoneButtons.forEach(btn => {
-        btn.addEventListener('click', function() {
-            console.log('Phone call initiated:', this.href);
-        });
+// Clean up any old admin panel references from localStorage
+function cleanupOldAdminData() {
+    // Remove old admin panel keys
+    const keysToRemove = ['github_cache', 'github_cache_timestamp', 'githubToken'];
+    keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
     });
-});
+}
