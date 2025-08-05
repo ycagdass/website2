@@ -766,3 +766,353 @@ header.scrolled {
         padding: 25px;
     }
 }
+
+/* ==========================================
+   INLINE EDITING STYLES
+   ========================================== */
+
+/* Edit toggle button */
+.edit-toggle-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border: none;
+    padding: 12px 16px;
+    border-radius: 25px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.edit-toggle-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+}
+
+.edit-toggle-btn.active {
+    background: linear-gradient(135deg, var(--accent-color), var(--orange-accent));
+}
+
+.edit-toggle-btn i {
+    font-size: 16px;
+}
+
+/* Editing toolbar */
+.editing-toolbar {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    z-index: 999;
+    min-width: 250px;
+    transition: var(--transition);
+}
+
+.editing-toolbar.hidden {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+}
+
+.toolbar-content {
+    padding: 16px;
+}
+
+.toolbar-btn {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-right: 8px;
+    margin-bottom: 8px;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.toolbar-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(139, 38, 53, 0.2);
+}
+
+.toolbar-btn.save-btn {
+    background: linear-gradient(135deg, var(--success-color), #45a049);
+}
+
+.toolbar-btn.cancel-btn {
+    background: linear-gradient(135deg, var(--error-color), #d32f2f);
+}
+
+.toolbar-status {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #eee;
+    font-size: 12px;
+    color: var(--text-light);
+}
+
+.status-success {
+    color: var(--success-color) !important;
+}
+
+.status-info {
+    color: var(--primary-color) !important;
+}
+
+.status-error {
+    color: var(--error-color) !important;
+}
+
+/* Editable areas */
+.editable-area {
+    position: relative;
+    transition: var(--transition);
+}
+
+.editing-mode .editable-highlighted {
+    outline: 2px dashed var(--primary-color);
+    outline-offset: 4px;
+    background: rgba(139, 38, 53, 0.05);
+    border-radius: 4px;
+    position: relative;
+    cursor: pointer;
+}
+
+.editing-mode .editable-highlighted::before {
+    content: "✏️ Düzenlemek için tıklayın";
+    position: absolute;
+    top: -25px;
+    left: 0;
+    background: var(--primary-color);
+    color: white;
+    padding: 4px 8px;
+    font-size: 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: var(--transition);
+    z-index: 10;
+}
+
+.editing-mode .editable-highlighted:hover::before {
+    opacity: 1;
+}
+
+.editing-active {
+    outline: 3px solid var(--accent-color) !important;
+    background: rgba(255, 111, 60, 0.1) !important;
+    min-height: 40px;
+    padding: 8px;
+    border-radius: 4px;
+}
+
+.editing-active:focus {
+    outline: 3px solid var(--accent-color) !important;
+}
+
+/* Updated price grid for better editing */
+.price-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    margin-top: 40px;
+}
+
+.price-grid .price-card {
+    background: white;
+    padding: 32px 24px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    text-align: center;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.price-grid .price-card:hover {
+    transform: translateY(-10px);
+    box-shadow: var(--shadow-hover);
+}
+
+.price-grid .price-card.featured {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    transform: scale(1.05);
+}
+
+.price-grid .price-card.featured::before {
+    content: "Popüler";
+    position: absolute;
+    top: 12px;
+    right: -30px;
+    background: var(--accent-color);
+    color: white;
+    padding: 4px 40px;
+    font-size: 12px;
+    font-weight: 600;
+    transform: rotate(45deg);
+}
+
+.price-grid .price-card h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--primary-color);
+}
+
+.price-grid .price-card.featured h3 {
+    color: white;
+}
+
+.price {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--accent-color);
+    margin-bottom: 24px;
+}
+
+.price-grid .price-card.featured .price {
+    color: var(--orange-accent);
+}
+
+.price-grid .price-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.price-grid .price-card li {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    position: relative;
+    padding-left: 20px;
+}
+
+.price-grid .price-card.featured li {
+    border-bottom-color: rgba(255, 255, 255, 0.2);
+}
+
+.price-grid .price-card li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--success-color);
+    font-weight: bold;
+}
+
+.price-grid .price-card.featured li::before {
+    color: var(--orange-accent);
+}
+
+.price-grid .price-card li:last-child {
+    border-bottom: none;
+}
+
+/* Updated reviews container for better editing */
+.reviews-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    margin-top: 40px;
+}
+
+.reviews-container .review-card {
+    background: white;
+    padding: 24px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+}
+
+.reviews-container .review-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-hover);
+}
+
+.reviews-container .review-stars {
+    color: var(--orange-accent);
+    margin-bottom: 12px;
+    font-size: 14px;
+}
+
+.reviews-container .review-card blockquote {
+    font-style: italic;
+    color: var(--text-dark);
+    margin-bottom: 12px;
+    line-height: 1.6;
+    position: relative;
+}
+
+.reviews-container .review-card blockquote::before {
+    content: """;
+    font-size: 48px;
+    color: var(--primary-color);
+    position: absolute;
+    left: -16px;
+    top: -8px;
+    opacity: 0.3;
+}
+
+.reviews-container .review-card cite {
+    font-weight: 600;
+    color: var(--primary-color);
+    font-style: normal;
+}
+
+/* Mobile responsiveness for editing interface */
+@media (max-width: 768px) {
+    .edit-toggle-btn {
+        top: 10px;
+        right: 10px;
+        padding: 10px 12px;
+        font-size: 12px;
+    }
+    
+    .edit-toggle-btn span {
+        display: none;
+    }
+    
+    .editing-toolbar {
+        top: 60px;
+        right: 10px;
+        left: 10px;
+        min-width: auto;
+    }
+    
+    .toolbar-content {
+        padding: 12px;
+    }
+    
+    .toolbar-btn {
+        font-size: 11px;
+        padding: 6px 8px;
+    }
+    
+    .editing-mode .editable-highlighted::before {
+        font-size: 9px;
+        padding: 2px 6px;
+    }
+    
+    .price-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .reviews-container {
+        grid-template-columns: 1fr;
+    }
+}
